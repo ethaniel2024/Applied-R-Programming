@@ -1,0 +1,243 @@
+---
+title: "Mini-Project 1: Teen Religiosity"
+author: Ethan Nelson
+format: 
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+## Data
+
+The Pew Research Center surveyed US teens in 2019. The data in this nationally representative sample was gathered using a self-administered web survey, and conducted among 1,811 dyads, with each dyad (or pair) comprised of one U.S. adolescent ages 13 to 17 and one parent per adolescent. The survey was conducted from March 29 to April 14, 2019.
+
+Pew articles based on the data are at <https://www.pewresearch.org/dataset/2019-survey-of-religion-among-u-s-teens-and-their-parents>
+
+## Import
+
+In the code chunk below (hidden in the report) we **import** the data from a CSV file.
+
+```{r}
+#| echo: false
+#| include: false
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(table1)
+# Data: Pew 
+# https://www.pewresearch.org/dataset/2019-survey-of-religion-among-u-s-teens-and-their-parents
+
+# download button gives a zip file, some wrangling yielded a csv file 
+# that focuses on a few teen responses (parent responses ignored 
+# in this analysis)
+# copied csv file to grimshawville.byu.edu so it's easier to input data 
+teens <- read_csv("https://grimshawville.byu.edu/PewTeenagerReligiosity.csv")
+```
+
+## Wrangling
+
+In the code chunk below (hidden in the report) is some **transforming**
+
+```{r}
+#| echo: false
+# convert character variable type to factor type
+# (by default R will coerce this when needed but with alphabetic factor levels
+teens <- teens |>
+  mutate(TestimonyGod = factor(TestimonyGod, levels = c("Absolutely Certain", "Fairly Certain", "Not Too Certain", "Not At All Certain", "Don't Believe")),
+         TestimonyTruthReligion = factor(TestimonyTruthReligion, levels = c("Only One", "Many", "Little in All", "None in Any")),
+         Prayer = factor(Prayer, levels = c("Daily", "Weekly", "Seldom", "Never")),
+         ScriptureStudy = factor(ScriptureStudy, levels = c("Often", "Sometimes", "Rarely", "None")),
+         HHIncome = factor(HHIncome, levels = c("< $30k", "$30k to $75k", "> $75k"))
+         )
+```
+
+## EDA
+
+```{r}
+glimpse(teens)
+```
+
+| variable                 | details                                                                                                                                              |
+|------------------|------------------------------------------------------|
+| `TestimonyGod`           | Do you believe in God or a universal spirit? How certain are you about this belief?                                                                  |
+| `TestimonyTruthReligion` | View of Religion: Only one religion is true, Many religions may be true, There is a little truth in any religion, There is no truth in any religion  |
+| `ChurchAttendance`       | Which is closer to your view? I mainly attend religious services because I want to, I mainly attend religious services because my parents want me to |
+| `Prayer`                 | Outside of attending religious services, how often do you pray?                                                                                      |
+| `ScriptureStudy`         | How often does your family read religious scriptures such as the Bible, Torah or Quran together?                                                     |
+| `Religion`               | What is your present religion, if any?                                                                                                               |
+| `HHIncome`               | Annual household income (reported by parent)                                                                                                         |
+
+[***1. Create "Table 1" (the summary statistics for all the columns in `teen`).***]{style="color:royalblue;"}
+
+(A little bit of starter code is provided below, and the code chunk is set to not be evaluated with `eval: false` because the current code in there is not valid code and hence the document wouldn't render. Once you replace the code with valid code, set the chunk option to `eval: true`, or remove the `eval` option altogether since it's set to `true` by default.)
+
+```{r}
+#| eval: true
+
+table1(~TestimonyGod + TestimonyTruthReligion + ChurchAttendance + Prayer + ScriptureStudy + Religion + HHIncome ,data = teens)
+```
+
+[***2. Modify the following plot to change the color of the bars to `"pink"`.***]{style="color:royalblue;"}
+
+```{r}
+ggplot(teens, aes(x = TestimonyGod)) +
+  geom_bar(fill="pink")
+```
+
+[***3. Add labels to the plot below for title, x and y axes. Uncomment to see the effect.***]{style="color:royalblue;"}
+
+```{r}
+ggplot(teens, aes(x = TestimonyGod)) +
+  geom_bar(aes(y = after_stat(prop), group = 1)) +
+  labs(
+    title = "Depicting Religious Testimony in Teenagers",
+    x = "Do you have a Testimony of God?", 
+    y = "Proportion of Surveyed Teenagers"
+    )
+```
+
+*Reflect:*
+
+Prompt: What do you want someone who looks at this graph to conclude about the testimonies about God's existence held by teenagers?
+
+[***4. Pick a single categorical variable and make a graphic.***]{style="color:royalblue;"}
+
+(A little bit of starter code is provided below, and the code chunk is set to not be evaluated with `eval: false` because the current code in there is not valid code and hence the document wouldn't render. Once you replace the code with valid code, set the chunk option to `eval: true`, or remove the `eval` option altogether since it's set to `true` by default.)
+
+```{r}
+#| eval: true
+ggplot(teens, aes(x = fct_infreq(ChurchAttendance))) +
+  geom_bar(aes(y = after_stat(prop), group = 1),
+    color = "black", fill = "yellow") +
+  labs( 
+    x = NULL, 
+    y = "Count", 
+    title = "Adolescent Motivation for Church Attendance"
+  )
+
+```
+
+*Reflect:*
+
+Prompt: What do you want someone who looks at this graph to conclude?
+
+I would like my audience to look at this graph and see that the majority of teens are attending church for their parents, but that this is a slim majority. A viewer would notice that there are a lot of teens attending church for themselves, and that there is not much spread between the three groups. The smallest group is definitely those that do not attend church in any form, although that group makes up less than a quarter of the total sample. As such, the viewers should conclude that the vast majority of teenagers are attending church, with more attending at the behest of their parents than their out of their own volition, but there is a sizable faction that is attending out of their own desire.
+
+[***5. Explore the relationship between `ChurchAttendance` and `TestimonyGod` by making a graphic of the relationship between the two variables.***]{style="color:royalblue;"}
+
+(This time no starter code is provided, you're on your own!)
+
+```{r}
+#| eval: true
+
+ggplot(teens, aes(x = ChurchAttendance, fill = TestimonyGod)) +
+  geom_bar(position = "fill", color="black") +
+  labs( 
+    x = "Who Do You Attend Church For?", 
+    y = "Proportion", 
+    title = "Adolescent Motivation for Church Attendance"
+  )
+
+```
+
+*Reflect:*
+
+Prompt: What do you want someone who looks at this graph to conclude?
+
+I want my audience to conclude that there is a natural pairing within the categories. Those that don't believe in God make up the largest portion of those that do not attend church, and the inverse is true for those that attend church for themselves. It is also noteworthy that the majority of teens that attend church for their parents are fairly certain that there is a God. The last noteworthy observation is of outliers, mainly within the category of those that attend church. There are teens with little to no belief in God that attend church for themselves. This opens up another fascinating research question along the lines of, "If you don't attend church for your parents or for God, why do you attend?"
+
+[***6. Pick two categorical variables and make a graphic of the relationship between the two variables.***]{style="color:royalblue;"}
+
+(This time no starter code is provided, you're on your own!)
+
+```{r}
+ggplot(teens, aes(x = HHIncome, fill = Religion)) +
+  geom_bar() +
+  labs(title = "Depicting the link between Household Income and Adolescent Devotion by Sect",
+       y = "Total Individuals Surveyed",
+       fill = "Reason") +
+  scale_x_discrete(guide = guide_axis(angle = 45))
+
+```
+
+*Reflect:*
+
+Prompt: What do you want someone who looks at this graph to conclude?
+
+I would like someone looking at this to conclude that the vast majority of teens in the sample are growing up in houses with incomes of at least 30k. The group sizes grow as household income grows, suggesting that there were significantly more teenagers surveyed from higher income households. The graph also shows every religious category as being represented in every category, with the relative proportions by religion remaining somewhat equal, suggesting that there is not a connection between a specific religion and annual household income. The data also includes all Evangelical Christians in one group, despite there being at least twenty different churches and/or religions that can be described as evangelical, suggesting the opportunity for further research into this category specifically.
+
+[***7. Explore the relationship between `Prayer`, `ScriptureStudy`, and `TestimonyGod` by making a graphic of the relationship between the variables.***]{style="color:royalblue;"}
+
+(This time no starter code is provided, you're on your own!)
+
+```{r}
+ggplot(teens, aes(fill = Prayer, x = ScriptureStudy)) +
+  geom_bar(position = "fill")  +
+  facet_wrap(~ TestimonyGod) 
+```
+
+*Reflect:*
+
+Prompt: What do you want someone who looks at this graph to conclude?
+
+There are a lot of moving pieces and it can be hard to take in everything at once, but this graph depicts how often teenagers pray and study the scriptures of their religion based on what they reported their testimony of God to be. It makes perfect sense that those who did not report any belief in God have the highest proportion of Never answers to each practice, and the same can be said for the inverse that the teenagers who have a certain belief in God also reported the highest proportions of taking part in each activity daily. The graph also demonstrates that with an increasingly casual belief in God comes an equally casual attitude towards religious practices outside of church attendance. Another further research question that this graph prompts is to ask those that pray or study the scriptures weekly if that is during or outside of their weekly worship service for those that attend, and to measure this same group of individuals who engage in religious practices weekly against teenagers that do and do not attend church.
+
+[***8. Pick three categorical variables and make a graphic of the relationship between the variables.***]{style="color:royalblue;"}
+
+(This time no starter code is provided, you're on your own!)
+
+```{r}
+ggplot(teens, aes(fill = TestimonyGod, x = Prayer)) +
+  geom_bar(position = "fill")  +
+  facet_wrap(~ ChurchAttendance) 
+```
+
+*Reflect:*
+
+Prompt: What do you want someone who looks at this graph to conclude?
+
+My audience that has read this far might be noticing a pattern, but those that do not have a belief in God demonstrate little to no desire to participate in religious practices, with prayer specifically being used in this graphic. This graphic does depict a fascinating insight that I myself had not considered until this moment, but there is a significant amount of teenagers that are absolutely certain in their belief in God and pray daily, but yet do not attend church. This again opens an interesting question as to why that is, perhaps their parents do not permit them to attend or they do not know where or how to attend. The inverse is also true, that there is a larger sum than I expected, which was admittedly zero, of teenagers that attend church for themselves, yet do not believe in God nor do they participate in prayer. Again, the question of why is raised, with my best guess being that it is a social motivation to attend and be with friends.
+
+## Model
+
+In the following code chunk the $\chi^2$ test is performed for $H_o:$ `ChurchAttendance` and `TestimonyGod` are independent.
+
+```{r}
+chisq.test(table(teens$ChurchAttendance, teens$TestimonyGod))
+```
+
+*Reflect:*
+
+[***9. Prompt: What is the conclusion from this inference?***]{style="color:royalblue;"}
+
+With this test, we were using math to see if there is a link between church attendance and belief in God for teenagers surveyed. The null hypothesis is that the two are independent, and the alternative is that they are not; that there is some kind of link between church attendance and belief in God. We have a large test statistic, which suggests a small p value. In hypothesis testing, we compare the actual p value against alpha, a preset level of significance. If we use 0.05 to suggest a less than five percent probability of making a type 1 error, or rejecting the null hypothesis when it is in fact true. With the p value coming back at 2.2e-16, this is significantly smaller than 0.05, so we can confidently reject the null hypothesis that a testimony of God and church attendance are independent and can claim that they are dependent upon one another in one way or another.
+
+[***10. Prompt: What is the nature of the correlation between `ChurchAttendance` and `TestimonyGod`? (That is, what differences do you observe in the levels of `ChurchAttendance` for the probabilities of `TestimonyGod` levels?)***]{style="color:royalblue;"} Based on the data shown in the table below, it appears that there is a positive correlation between a belief in God and church attendance, with teenagers that reported a stronger belief in God also attend church and attend for themselves more than the those that are uncertain in their belief. Additionally, those that report little to no belief in God demonstrate similar patterns for church attendance, with most never going, and the vast majority of those that do attend are not attending out of their own volition.
+
+This yields the conclusion that a belief in God influences desire or even lack thereof to attend church. *Note*: The following table may supplement your graphic in Problem 5 in your answer.
+
+```{r}
+#| echo: false
+table1(~ TestimonyGod | ChurchAttendance, data = teens)
+```
+
+## Share
+
+[***11. Please respond to one of the following prompts:***]{style="color:royalblue;"}
+
+***Prompt (Operational Definitions):*** Jen and Sam Norton have shared their experience directing FSY in London based their application of Elder Holland’s come-as-you-are-but-don’t-expect-to-stay-as-you-are talk. One of their goals was to help youth feel they were welcome at FSY London even if they didn’t have an "I know" testimony. They encouraged youth to use language that reflected their often nascent testimonies, language that reflected their faith not just their testimony:
+
+|        |           |        |          |          |          |
+|--------|-----------|--------|----------|----------|----------|
+| I hope | I believe | I pray | I search | I ponder | I wonder |
+
+Imagine yourself administering this survey to a teen who responded to the "Do you believe in God or a universal spirit? How certain are you about this belief?" question with "I search" or "I ponder" or "I wonder" and you had to place their answer in the categories used in the survey. Explain your choice / decision for each mapping.
+
+***Prompt (Ethics):*** All research involving human subjects should be conducted ensuring that a proposed protocol meets the appropriate ethical guidelines before subjects may be enrolled in the study. Read "Ethics in Research and Programming with Adolescents: Capturing the Perspectives of International Organizations" <https://publichealth.jhu.edu/sites/default/files/2023-09/ethicsinresearchandprogrammingwithadolescents-capturingtheperspectivesofinter.pdf>.
+
+Summarize best practices for informed consent, privacy, and confidentiality for research on teens / adolescents in a paragraph of less than 12 sentences.
+
+Each of those three topics are important and nuanced on their own, but in the interest of brevity I'll try to keep my comments to about four sentences on each. Firstly, informed consent is critical in working with adolescents. Informed consent is defined as when the individual is made well aware of the potential risks and or costs of the experiment, and chooses to go forward anyway. This must come from both the parents and the child, and ideally should be adapted to the age and understanding of each. Along with this, participation can and should not be coerced or forced, rather voluntary and the patient should be able to withdraw at any point. Secondly, privacy is especially important in work with adolescents. Researchers should carefully safeguard data collected from teenagers, and said data collection should be as minimal as possible while still satisfying the experiment requirements. Finally, data should be avaliable to researchers on a need to know basis, especially in studies with more sensitive data such as sexual history or other potentially compromising information. Thirdly, confidentiality, or keeping private information private. With teenagers, they may be more hesitant to provide accurate answers, especially if they do not want their parents to learn something compromising from their responses. As such, it is important to anonymize data if at all possible, such as by using a different name for the individual. It is also important to comply with reporting requirements that necessitate breaking confidentiality, such as in cases of abuse or danger to the individual or others. In summary, working with teenagers can answer a multitude of fascinating research questions, but data and participants must be handled delicately and with especial care for the individuals.
+
+***Prompt (Research):*** Suppose you are on a research team doing a survey of LDS teens. We often use "active" or "inactive" to summarize a complicated mix of many components of religious involvement. Write **SIX** survey questions and the possible responses that would delve into LDS religious involvement.

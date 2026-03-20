@@ -1,0 +1,278 @@
+---
+title: "Mini-Project 4"
+author: Ethan Nelson
+format: pdf
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+## Simulation Study: Understanding the Central Limit Theorem
+
+The central limit theorem is a staple of introductory statistics courses. The objective of this mini project is to see in the code the story typically offered to support the central limit theorem.
+
+Note: For a refresher on the central limit theorem watch <https://www.khanacademy.org/math/ap-statistics/sampling-distribution-ap/sampling-distribution-mean/v/central-limit-theorem> which offers the underlying structure for this work.
+
+### Review of Theory
+
+**Data Distribution:**
+
+Suppose the data is from a population characterized by the probability mass function $p(y) = {\rm P}(Y\ =\ y)$. The probability mass function must satisfy: \begin{eqnarray*}
+&& p(y) \geq 0 \mbox{\ for all $y$} \\
+&& \\
+&& \sum_{y\in {\cal D}} p(y) = 1, \mbox{where ${\cal D} = \{y \mbox{\ such that\ } p(y)>0 \}$}
+\end{eqnarray*}
+
+**Sampling Distribution of** $\overline{Y}$
+
+Compute the sample mean $\overline{Y}$ from a SRS of $n$ with replacement from a population characterized by the probability mass function $p(y) = {\rm P}(Y\ =\ y)$.
+
+## Technical Report on Simulation Study
+
+Below are sections of what should be included in the Mini Project Report.
+
+**Introduction**
+
+In this section explain the central limit theorem to someone in an introductory statistics course. Specifically address:
+
+-   taking a sample and computing sample mean
+-   repeated sampling
+-   characteristics of the resulting sampling distribution
+
+In statistics, we want to learn about trends in data to identify trends in the population. What this means, is that it would be impossible to survey or observe an entire population, so we take a sample and try to extrapolate the population values from there. For instance, if we wanted to know what fruit was the absolute favorite among BYU students, we would ask a large group of the population and then draw conclusions from there rather than asking the entire population. That is called a sample, and then finding the average of that sample constitutes the sample mean.
+
+In essence, the Central Limit Theorem states that as long as the sample size of a study is large enough, typically 30 observations or greater, it will be normally distributed. This distribution will have a bell shaped curve that is approximately symmetrical and centered on a mean.
+
+What is meant by repeated sampling, is that if one were to take a sample, and then continually take larger samples and calculating the accompanying means of those samples, the sample means will eventually align with the aforementioned normal distribution.
+
+**Reproduce Khan Academy Example**
+
+Perform the simulation study for the Khan Academy example. The data is from a population with 1 and 6 very likely, 3 and 4 likely, 2 and 5 impossible. The data distribution is
+
+|      |     |     |     |     |     |     |
+|:----:|:---:|:---:|:---:|:---:|:---:|:---:|
+|  y   |  1  |  2  |  3  |  4  |  5  |  6  |
+| p(y) | 0.4 |  0  | 0.1 | 0.1 |  0  | 0.4 |
+
+Code to specify and plot the data distribution:
+
+```{r}
+#| eval: false
+possible_values <- 1:6
+pmf <- c(0.4, 0, 0.1, 0.1, 0, 0.4)
+
+# plot of data distribution
+plot(possible_values, pmf, type = "h", lty = 2, 
+     xlab = "y", ylab = "p(y) = P(Y = y)", main = "Data Distribution",
+     ylim = c(0, 1))
+points(possible_values, pmf, pch = 19)
+```
+
+Write a function to generate one possible dataset and compute the sample mean
+
+Psuedo code for function:
+
+```{=html}
+<pre>
+arguments:
+  specify the data distribution (possible_values, pmf)
+  sample size (n)
+
+generate a SRS sample with replacement of n
+compute the sample mean
+return the sample mean
+</pre>
+```
+
+```{r}
+#| eval: true
+gimmedat <- function(possible_values, pmf, n){
+  # observe data from population
+  y <- sample(possible_values, n, replace = TRUE, prob = pmf)
+  # compute the mean of the observed data
+  mean(y)
+}
+```
+
+Write code to create a graphic of the sampling distribution of $\overline{Y}$
+
+Pseudo code for simulation study:
+
+```{=html}
+<pre>
+define possible values, pmf, n
+specify the number of simulated sample means (Nsim) 
+
+for 1 to Nsim
+  call the R function that generates one possible dataset and computes the sample mean
+  add this value to the collection of simulated sample means
+  
+create a graphic of the sampling distribution
+</pre>
+```
+
+Note: the Khan Academy video referred to `Nsim = 10^4`
+
+Note: The function `hist` produces a frequency histogram with it's default arguments. When comparing different distributions it is "more fair" to have the density histogram (`probability = TRUE`) to account for different distributions having different histogram bin widths.
+
+**Sampling Distribution of** $\overline{Y}$ with n = 5
+
+```{r}
+#| eval: true
+possible_values <- 1:6
+pmf <- c(0.4, 0, 0.1, 0.1, 0, 0.4)
+n <- 5
+
+Nsim <- 10^4
+
+SampleDist5 <- NULL
+for(i in 1: Nsim){
+  this_ybar <- gimmedat(possible_values, pmf, n)
+  SampleDist5 <- c(SampleDist5, this_ybar)
+}
+hist(SampleDist5, probability = TRUE,
+     xlim = c(1, 6), ylim = c(0, 1),
+     xlab = "Sample Mean", main = "n = 5")
+```
+
+**Sampling Distribution of** $\overline{Y}$ with n = 10
+
+```{r}
+#| eval: true
+possible_values <- 1:6
+pmf <- c(0.4, 0, 0.1, 0.1, 0, 0.4)
+n <- 10
+
+Nsim <- 10^4
+
+SampleDist10 <- NULL
+for(i in 1: Nsim){
+  this_ybar <- gimmedat(possible_values, pmf, n)
+  SampleDist10 <- c(SampleDist10, this_ybar)
+}
+hist(SampleDist10, probability = TRUE,
+     xlim = c(1, 6), ylim = c(0, 1),
+     xlab = "Sample Mean", main = "n = 10")
+```
+
+**Sampling Distribution of** $\overline{Y}$ with n = 30
+
+```{r}
+possible_values <- 1:6
+pmf <- c(0.4, 0, 0.1, 0.1, 0, 0.4)
+n <- 30
+
+Nsim <- 10^4
+
+SampleDist30 <- NULL
+for(i in 1: Nsim){
+  this_ybar <- gimmedat(possible_values, pmf, n)
+  SampleDist30 <- c(SampleDist30, this_ybar)
+}
+hist(SampleDist30, probability = TRUE,
+     xlim = c(1, 6), ylim = c(0, 1),
+     xlab = "Sample Mean", main = "n = 5")
+```
+
+**Beat the Central Limit Theorem**
+
+Choose a data distribution that has a shape you think would defy the central limit theorem. For this exercise, restrict the possible values to ${\cal D} = \{1, 2, 3, 4, 5, 6, 7, 8, 9, 10\}$.
+
+Prompt: Why would this example defy the central limit theorem?
+
+My thought process was to create a dataset with wildly skewed outliers, and to choose the numbers haphazardly so as to beat the random sampling assumption of the central limit theorem. What I have described is also a subversion of the sampling process, and as such I got a sample/dataset that doesn't reflect the CLT because it hasn't followed sound statistical processes. In summary, the CLT is immutable when the proper procedure is followed.
+
+Note: You are not graded on being able to beat the central limit theorem, just on your logic of why what you tried had a chance.
+
+Code to specify and plot the data distribution:
+
+```{r}
+#| eval: false
+possible_values <- 1 : 10
+pmf <- c(0.01, 0.4, 5.48, 0.2854, 1, 0.8246, 0.125, 0.125, 0.5, 1.25)
+
+# plot of data distribution
+plot(possible_values, pmf, type = "h", lty = 2, 
+     xlab = "y", ylab = "p(y) = P(Y = y)", main = "Data Distribution",
+     ylim = c(0, 1000))
+points(possible_values, pmf, pch = 19)
+```
+
+Modify your function above that generates one possible dataset and compute the sample mean to ALSO
+
+-   Check to see if `sum(pmf)` is one (if not, provide an error message)
+
+```{r}
+#| eval: true
+gimmedat <- function(possible_values, pmf, n){
+  if(sum(pmf) !=1){
+  print("Your PMF value does not sum to 1.")}
+  else{y <- sample(possible_values, n, replace = TRUE, prob = pmf)
+  mean(y)}
+}
+```
+
+Write code to create a graphic of the sampling distribution of $\overline{Y}$
+
+**Sampling Distribution of** $\overline{Y}$ with n = 5
+
+```{r}
+#| eval: true
+possible_values <- 1 : 10
+pmf <- c(0.001, 0.04, .548, 0.02854, 0.1, 0.08246, 0.0125, 0.0125, 0.05, 0.125)
+
+n <- 5
+
+Nsim <- 10^4
+
+SampleDist5 <- NULL
+for(i in 1: Nsim){
+  this_ybar <- gimmedat(possible_values, pmf, n)
+  SampleDist5 <- c(SampleDist5, this_ybar)
+}
+hist(SampleDist5, probability = TRUE,
+     xlim = c(1, 6), ylim = c(0, 1),
+     xlab = "Sample Mean", main = "n = 5")
+```
+
+**Sampling Distribution of** $\overline{Y}$ with n = 10
+
+```{r}
+#| eval: true
+possible_values <- 1 : 10
+pmf <- c(0.001, 0.04, .548, 0.02854, 0.1, 0.08246, 0.0125, 0.0125, 0.05, 0.125)
+
+n <- 10
+
+Nsim <- 10^4
+
+SampleDist10 <- NULL
+for(i in 1: Nsim){
+  this_ybar <- gimmedat(possible_values, pmf, n)
+  SampleDist10 <- c(SampleDist10, this_ybar)
+}
+hist(SampleDist10, probability = TRUE,
+     xlim = c(1, 6), ylim = c(0, 1),
+     xlab = "Sample Mean", main = "n = 10")
+```
+
+**Sampling Distribution of** $\overline{Y}$ with n = 30
+
+```{r}
+#| eval: true
+possible_values <- 1 : 10
+pmf <- c(0.001, 0.04, .548, 0.02854, 0.1, 0.08246, 0.0125, 0.0125, 0.05, 0.125)
+
+n <- 30
+
+Nsim <- 10^4
+
+SampleDist30 <- NULL
+for(i in 1: Nsim){
+  this_ybar <- gimmedat(possible_values, pmf, n)
+  SampleDist30 <- c(SampleDist30, this_ybar)
+}
+hist(SampleDist30, probability = TRUE,
+     xlim = c(1, 6), ylim = c(0, 1),
+     xlab = "Sample Mean", main = "n = 30")
+```

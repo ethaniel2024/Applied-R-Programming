@@ -1,0 +1,476 @@
+---
+title: "Mini-Project 2"
+author: Ethan Nelson
+format: 
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+## Project A: Forecasting US Energy Consumption
+
+**Data:**
+
+You are asked to predict the monthly US residential energy consumption for the next 2 years for the 'Short-Term Energy Outlook' using data from the US Department of Energy.
+
+**Import:**
+
+The US Department of Energy collects an impressive amount of data to support the energy industries. For this assignment use the monthly total energy consumed by the US residential sector. The webpage
+
+<https://www.eia.gov/totalenergy/data/browser/index.php?tbl=T02.02>
+
+contains monthly web tables, but an easier approach to getting the data into R uses the result of the 'Download' button to read the source data from the source CSV file.
+
+```{r}
+#| include: false
+#| warnings: false
+library(tidyverse)
+library(scales)
+library(table1)
+```
+
+```{r}
+#| warning: false
+energy <- read_csv("https://www.eia.gov/totalenergy/data/browser/csv.php?tbl=T02.02",
+# names in first row, but the names aren't meaningful
+                   col_names = c("MSN","Time","Res_Energy","label1","label2","label3"),
+                   skip = 1) |>
+  mutate(Res_Energy = parse_number(Res_Energy, na = "Not Available"),
+         Time = ym(Time)) 
+```
+
+[***Problem 1. Why is `energy` tidy?***]{style="color:royalblue;"}
+
+*Note:* Your answer will apply the 3 tidy data rules.
+
+Yes, the dataset is tidy. There are three tenets of tidy dataset design including that each variable must have it's own column, each observation must have it's own row, and that each value must have it's own cell. There are not multiple values assigned to the same cell, each observation has it's own row and each variable has it's own column. While there are some missing values that it will be important to account for later and be aware of in the time section that represent yearly totals, this is a tidy dataset that we can get to work on.
+
+```{r}
+#| eval: true
+  filter(energy, Time > "1991-12-31" & MSN=="TERCBUS") |>
+  select(Time, Res_Energy) |>
+  na.omit()
+```
+
+**Wrangling:**
+
+This version of the `energy` dataset requires some wrangling before performing the analysis. Specifically the following tasks are required:
+
+-   filter to the data in rows where `MSN` is `TERCBUS` (Total Energy Consumed by the Residential Sector in trillion Btu),
+
+-   filter to current data (after 1991),
+
+-   remove the annual total rows (`Time` is missing / `NA`).
+
+-   only include the columns `Time` and `Res_Energy` columns, and
+
+[***Problem 2. Edit the following code chunk to perform the required tasks.***]{style="color:royalblue;"}
+
+```{r}
+#| eval: true
+energy <- energy |>
+# filter to TERCBUS Total Energy Consumed by the Residential Sector
+  filter(MSN=="TERCBUS") |>
+# filter to "since the 90's"
+  filter(Time > "1991-12-31") |>
+# remove annual total rows (Time is NA)
+  na.omit() |>
+# keep just the Time and Res_Energy columns
+  select("Time", "Res_Energy")
+
+# take a look
+tail(energy)
+```
+
+**EDA:**
+
+[***Problem 3. Plot the time series for US residential energy consumption (in trillion Btu).***]{style="color:royalblue;"}
+
+**Note:** You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+ggplot(energy, aes(x = Time, y = Res_Energy)) +
+  geom_line()
+```
+
+**Model:**
+
+Fit an ARIMA$(1, 1, 1) \times (1, 1, 1)_{12}$ model and report the parameter estimates and standard errors.
+
+**Note:** The required code is provided. You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+energy_out <- arima(energy$Res_Energy,
+                    order = c(1, 1, 1),
+		                seasonal = list(order = c(1, 1, 1), period = 12))
+
+# table of estimates and se
+energy_out
+```
+
+Forecast the US residential energy consumption for the next 2 years. Report a table of predictions and 95% prediction intervals.
+
+**Note:** The required code is provided. You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+#  "next two years" 
+energy_forecast <- data.frame(Time = max(energy$Time) + months(1 : 24))
+energy_yhat <- predict(energy_out, n.ahead = 24)
+
+# table of forecasts and uncertainty
+energy_forecast$pred <- energy_yhat$pred
+energy_forecast$L <- energy_yhat$pred - 2 * energy_yhat$se
+energy_forecast$U <- energy_yhat$pred + 2 * energy_yhat$se
+
+energy_forecast
+```
+
+**Share:**
+
+**Note:** The required code is provided. You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+#| warnings: false
+#| code-fold: true
+ggplot(energy_forecast, aes(x = Time, y = pred)) +
+  geom_line() + 
+  geom_line(aes(x = Time, y = L), col = "forestgreen", linetype = 2) + 
+  geom_line(aes(x = Time, y = U), col = "forestgreen", linetype = 2) +
+  scale_x_date(date_labels = "%b %Y") +
+  scale_y_continuous(labels =  label_comma()) +
+  labs(
+    title = "Residential Energy",
+    x = NULL, 
+    y = "Forecast Energy (in trillion Btu)"
+    )
+```
+
+[***Problem 4. Prompt: Does it appear there is a monthly pattern? If so, explain the possible business/economic 'cause' for this effect.***]{style="color:royalblue;"}
+
+Yes, it does appear that energy usage soars in the winter season and plummets in the summer months. This is plausible as more people are spending time inside during the winter than the summer and engaging in indoor activities that use more energy such as watching television or playing video games, whereas in the summer months, individuals might be more likely to participate in outdoor activities such as hiking or fishing that do not require any energy usage. I don't know enough about the difference between costs for heating and air conditioning, although it would be worth exploring if there is a significant difference between the two and if that is also contributing to the broad discrepancies between summer and winter energy usage.
+
+## Project B: Hotel Pricing Demand
+
+**Data:**
+
+This dataset was created to understand hotel demand. The goal is to predict the price a consumer would purchase a hotel room. If the offered price is too high, the hotel will lose revenue because the room goes unused. If the offered price is too low, the consumer will pay for the room because it's less than they expected (got a good deal) but the hotel will have lost potential revenue because they could have charged a higher price and still got the booking.
+
+Each row in the dataset represents a hotel booking.
+
+Source: Antonio, N., de Almeida, A., and Nunes, L. 2019. "Hotel booking demand datasets." **Data in Brief**. 22, 41-49.
+
+(Made popular by Tidy Tuesday)
+
+Analysis Objective:
+
+Goal is to predict the price a consumer would purchase a hotel room
+
+-   If offered price is too high, the hotel will lose revenue because the room goes unused.
+
+-   If the offered price is too low, the consumer will pay for the room because they got a good deal but the hotel will have lost potential revenue because they could have charged a higher price and still got the booking.
+
+**Import:**
+
+```{r}
+#| warnings: false
+#| output: false
+#| echo: false
+#| eval: false
+#(change to eval: true if working with Problem 2 independent of Project 1) Otherwise these packages are already loaded
+library(tidyverse)  
+library(table1)
+```
+
+```{r}
+#| warnings: false
+hotel <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-11/hotels.csv')
+```
+
+Note: The data dictionary is at the end of this document.
+
+[***Problem 5. Why is `hotel` tidy?***]{style="color:royalblue;"}
+
+*Note:* Your answer will apply the 3 tidy data rules.
+
+Yes, the dataset is tidy. There are three tenets of tidy dataset design including that each variable must have it's own column, each observation must have it's own row, and that each value must have it's own cell. There are not multiple values assigned to the same cell, each observation has it's own row and each variable has it's own column. While there are some missing values that it will be important to account for later and be aware of such as agent and company, values that don't apply to some of the bookings, this is a tidy dataset that we can get to work on.
+
+```{r}
+hotel |>
+  slice_sample(n = 10)
+
+glimpse(hotel)
+
+mean(hotel$adr)
+```
+
+**Wrangling:**
+
+`hotel` is tall and wide. What are we focused on?
+
+-   Room Cost
+
+-   Focus on the City Hotel Property
+
+-   Focus on the Bookings not cancelled
+
+-   Do we have length of stay? How do we compute it?
+
+    We do not have that in the dataset initially, but we could compute it by taking all bookings with reservation status as checked out and subtract the arrival date from the reservation status date column and create a new column with the length of stay in days.
+
+-   Do we know which bookings include a weekend? How do we compute it?
+
+    Yes we do, provided in the stays_in_weekend_nights column. We could use a filter function that looks like, filter(hotel, stays_in_weekend_nights \>= 1).
+
+[***Problem 6. Create a new dataset `cityhotel` with***]{style="color:royalblue;"}
+
+-   rows with
+
+    -   `hotel` is `City Hotel` **AND**
+
+    -   `is_canceled` is 0
+
+-   columns include `adr` and computed columns
+
+    -   `stay` which is the sum of `stays_in_weekend_nights` and `stays_in_week_nights`
+
+    -   `weekend` using the code chunk
+
+|                 `ifelse(stays_in_weekend_nights > 1, "Weekend", "NotWeekend")`
+
+```{r}
+#| eval: true
+cityhotel <- hotel |>
+  filter(hotel == "City Hotel") |>
+  mutate(stay = stays_in_weekend_nights + stays_in_week_nights, 
+         weekend = ifelse(stays_in_weekend_nights > 1, "Weekend", "NotWeekend"), is_canceled = 0) |>
+  select("adr", "stay", "weekend")
+
+tail(cityhotel)
+cityhotel <- cityhotel |>
+  mutate(stay_category = ifelse(stay >= 3, "Long Stay", "Short Stay"))
+cityhotel |>
+  group_by(stay_category) |>
+  summarise(mean_stay = mean(adr))
+```
+
+```{r}
+mean(cityhotel$adr)
+mean(cityhotel$stay)
+```
+
+**EDA:**
+
+-   Do visitors pay less by staying longer?
+
+    The mean of the average daily rate column holistically is about \$101.83. When we work with the dataset more intently and only consider city hotels that weren't canceled, that figure jumps to \$105.35 for this subset as a whole. However, further analysis is still needed to answer the exact question at hand. I wrote the above code to group the dataset into two categories: those who were at City Hotels longer than the average stay and those whose stay was shorter than the average guest.
+
+    This computation showed that those who stay three nights or longer, the exact mean stay was 2.98 nights, so I rounded to 3 and included that in the above average group. If we think back to the average daily rate payed for an average stay at a City Hotel being \$105.35, we will see that those who had longer stays paid more by staying longer, as their average daily rate was a rounded \$108.52, whereas those that were in the City Hotels for less than three nights only payed a rounded average daily rate of \$101.25. In conclusion, visitors actually paid more per diem for longer stays.
+
+    ```{r}
+     countryhotel <- cityhotel |>
+      filter(weekend == "Weekend") |>
+      summarize(mean_stay = mean(adr))
+    ```
+
+    ```{r}
+    urbanhotel <- cityhotel |>
+      filter(weekend =="NotWeekend") |>
+      summarize(mean_stay = mean(adr))
+    ```
+
+-   Are weekend stay costs more at City Hotel?
+
+    I used the filter and summarize functions built into R to give us a mean of the average daily rate paid by guests whose stays did and did not include a weekend, respectively. We can see that the former, those who did stay over a weekend, paid an average of \$107.60 while those who did not paid an average of \$104.53. While a T-test and comparison against a preset P-value would be needed to determine statistical significance, I can weigh in on practical significance. For me as a college student with limited income and funds, this is a significant difference that could add up over the course of a multi-day stay. However, for someone that is traveling for business and has a company that is paying for their travel, this difference might not even be noticed, let alone considered.
+
+[***Problem 7. Create a graphic showing the relationship between `stay` and `adr`.***]{style="color:royalblue;"}
+
+```{r}
+#| code-fold: true
+ggplot(cityhotel, aes(x = stay, y = adr)) +
+  geom_line() +
+  geom_smooth() +
+  labs(title = "Comparing Daily Rate and Stay Duration",
+       x = "Stay (Nights)",
+       y= "Average Daily Rate ($)") +
+  scale_y_continuous(limits = c(0, 500)) +
+  scale_x_continuous(limits = c(0, 50))
+```
+
+[***Problem 8. Modify the graphic in 7 to focus on `stay` less than 20 nights and `adr` greater than \$10.***]{style="color:royalblue;"}
+
+```{r}
+#| code-fold: true
+ggplot(cityhotel, aes(x = stay, y = adr)) +
+  geom_line() +
+  geom_smooth() +
+  labs(title = "Comparing Daily Rate and Stay Duration",
+       x = "Stay (Nights)",
+       y= "Average Daily Rate ($)") +
+  scale_y_continuous(limits = c(10, 375)) +
+  scale_x_continuous(limits = c(0, 20))
+```
+
+[***Problem 9.Reflect: Prompt: What should someone know about the relationship (form, direction, strength, unusual observations) between amount a customer is willing to pay and the length of the stay?***]{style="color:royalblue;"}
+
+The form of the line of best fit, blue line, is approximately horizontal, which is technically linear. The direction is slightly positive initially, but starts to trend down once we reach stays beyond fifteen nights. I used a line instead of individual data points for the data from the city hotels, as the points would be overwhelming and make analysis difficult. The standard deviation at each night shrinks as the duration of stay shrinks, which makes sense intuitively as there aren't nearly as many guests staying for weeks at a time, thus eliminating many of the outliers that might be skewing the earlier standard deviations for the city hotels.
+
+[***Problem 10. Create a graphic showing the difference between weekend and non-weekend stays and `adr`.***]{style="color:royalblue;"}
+
+```{r}
+#| code-fold: true
+ggplot(cityhotel, aes(x = adr, fill = weekend)) +
+  geom_histogram() +
+  scale_y_continuous(limits = c(0, 150)) +
+  scale_x_continuous(limits = c(0, 60)) +
+  scale_fill_manual(values = c("royalblue", "gold"))
+```
+
+```{r}
+ruralhotel <- cityhotel |>
+  group_by(weekend) |>
+  summarize(mean_stay = mean(adr),
+            std_dev_stay = sd(adr))
+```
+
+[***Problem 11. Reflect: Prompt: Is there a difference in the amount a customer is willing to pay and if the stay is a weekend or non-weekend?***]{style="color:royalblue;"}
+
+**Reflect:**
+
+Yes, there is a difference between what city hotel guests are willing to pay for weekend and non-weekend stays. I used the group by and summarize functions built into R to give us a mean of the average daily rate paid by guests whose stays did and did not include a weekend, respectively. Again, we can see that the former, those who did stay over a weekend, paid an average of \$107.60 while those who did not paid an average of \$104.53. While a T-test and comparison against a preset P-value would be needed to determine statistical significance, I can weigh in on practical significance. For me as a college student with limited income and funds, this is a significant difference that could add up over the course of a multi-day stay. However, for someone that is traveling for business and has a company that is paying for their travel, this difference might not even be noticed, let alone considered.
+
+I also ran calculations on the standard deviations of each, or how far on average each value is from the mean. I wasn't surprised to see that there was greater digression from the mean during the week compared to the weekend, as the higher rates of the weekend were likely more closely controlled and monitored by hotel management, whereas the higher supply of available rooms at city hotels during the week likely opened the possibility of offering discounts and incentives to fill these rooms during the week.
+
+What has been learned so far Reflection: Price is complicated. Go back to the full dataset and think about other possible effects. The next section returns to Wrangling to create a new dataset.
+
+**Wrangling:**
+
+[***Problem 12. Add some lines to the previous creation of `cityhotel`.***]{style="color:royalblue;"}
+
+Modify the creation of `cityhotel` to
+
+-   `adr` greater than \$10
+
+-   include additional columns: `lead_time`, `is_repeated_guest`, `required_car_parking_spaces`, `total_of_special_requests`
+
+```{r}
+#| eval: true
+cityhotel <- hotel |>
+  filter(hotel == "City Hotel") |>
+  filter(is_canceled == 0) |>
+  filter(adr > 10) |>
+  mutate(stay = stays_in_weekend_nights + stays_in_week_nights,
+         weekend = ifelse(stays_in_weekend_nights > 1, "Weekend", "NotWeekend")) |>
+  select("lead_time","is_repeated_guest", "required_car_parking_spaces", "total_of_special_requests", "adr")
+```
+
+**EDA:**
+
+[***Problem 13. Create a graphic of the relationship of `adr` to the other factors.***]{style="color:royalblue;"}
+
+```{r}
+library(GGally)
+#| code-fold: true
+cityhotel |>
+  ggpairs()
+```
+
+**Model:**
+
+**Note:** The required code is provided. You will need to set `eval: true` in these code blocks when you have created the `cityhotel` dataset in the Wrangling section.
+
+Create train and test datasets for modeling (70% - 30%)
+
+```{r}
+#| eval: true
+
+train_samplesize <- 32000
+set.seed(2319)
+train_rows <- sample(45073, train_samplesize)
+
+train <- cityhotel[train_rows, ]
+test <- cityhotel[-train_rows, ]
+
+slice_sample(train, n = 15)
+```
+
+Fit a regression model to `adr`
+
+```{r}
+#| eval: true
+
+out1 <- lm(log(adr) ~ ., data = train)
+summary(out1)
+```
+
+Prediction Performance
+
+```{r}
+#| eval: true
+
+mean( (train$adr - exp( predict(out1) ) )^2 )
+mean( (test$adr - exp( predict(out1, newdata = test) ) )^2 )
+```
+
+**Share:**
+
+**Note:** The required code is provided. You will need to set `eval: true` in this code block when you have created the `cityhotel` dataset in the Wrangling section.
+
+Table 1
+
+```{r}
+```
+
+Signs on regression coefficients make sense
+
+Prediction in the future can be trusted (no evidence of overfit)
+
+Naive prediction uncertainty
+
+$$
+\hat{Y}\ \pm\ 2 \sqrt{1320} = \hat{Y}\ \pm\  2 \cdot 36.3 = \hat{Y}\ \pm\ 73
+$$
+
+***Note:*** use `predict` and untransform for precise prediction interval
+
+# Data Dictionary for `hotel`
+
+*Note:* Below is the full data dictionary. It is wide (there are lots of variables), and long (lots of rows), but most analyses will use a subset for analysis.
+
+| variable                       | class     | description                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|:-----------------------|:-----------------------|:-----------------------|
+| hotel                          | character | Hotel (H1 = Resort Hotel or H2 = City Hotel)                                                                                                                                                                                                                                                                                                                                                                                           |
+| is_canceled                    | double    | Value indicating if the booking was canceled (1) or not (0)                                                                                                                                                                                                                                                                                                                                                                            |
+| lead_time                      | double    | Number of days that elapsed between the entering date of the booking into the PMS and the arrival date                                                                                                                                                                                                                                                                                                                                 |
+| arrival_date_year              | double    | Year of arrival date                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| arrival_date_month             | character | Month of arrival date                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| arrival_date_week_number       | double    | Week number of year for arrival date                                                                                                                                                                                                                                                                                                                                                                                                   |
+| arrival_date_day_of_month      | double    | Day of arrival date                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| stays_in_weekend_nights        | double    | Number of weekend nights (Saturday or Sunday) the guest stayed or booked to stay at the hotel                                                                                                                                                                                                                                                                                                                                          |
+| stays_in_week_nights           | double    | Number of week nights (Monday to Friday) the guest stayed or booked to stay at the hotel                                                                                                                                                                                                                                                                                                                                               |
+| adults                         | double    | Number of adults                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| children                       | double    | Number of children                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| babies                         | double    | Number of babies                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| meal                           | character | Type of meal booked. Categories are presented in standard hospitality meal packages: <br> Undefined/SC -- no meal package;<br>BB -- Bed & Breakfast; <br> HB -- Half board (breakfast and one other meal -- usually dinner); <br> FB -- Full board (breakfast, lunch and dinner)                                                                                                                                                       |
+| country                        | character | Country of origin. Categories are represented in the ISO 3155--3:2013 format                                                                                                                                                                                                                                                                                                                                                           |
+| market_segment                 | character | Market segment designation. In categories, the term "TA" means "Travel Agents" and "TO" means "Tour Operators"                                                                                                                                                                                                                                                                                                                         |
+| distribution_channel           | character | Booking distribution channel. The term "TA" means "Travel Agents" and "TO" means "Tour Operators"                                                                                                                                                                                                                                                                                                                                      |
+| is_repeated_guest              | double    | Value indicating if the booking name was from a repeated guest (1) or not (0)                                                                                                                                                                                                                                                                                                                                                          |
+| previous_cancellations         | double    | Number of previous bookings that were cancelled by the customer prior to the current booking                                                                                                                                                                                                                                                                                                                                           |
+| previous_bookings_not_canceled | double    | Number of previous bookings not cancelled by the customer prior to the current booking                                                                                                                                                                                                                                                                                                                                                 |
+| reserved_room_type             | character | Code of room type reserved. Code is presented instead of designation for anonymity reasons                                                                                                                                                                                                                                                                                                                                             |
+| assigned_room_type             | character | Code for the type of room assigned to the booking. Sometimes the assigned room type differs from the reserved room type due to hotel operation reasons (e.g. overbooking) or by customer request. Code is presented instead of designation for anonymity reasons                                                                                                                                                                       |
+| booking_changes                | double    | Number of changes/amendments made to the booking from the moment the booking was entered on the PMS until the moment of check-in or cancellation                                                                                                                                                                                                                                                                                       |
+| deposit_type                   | character | Indication on if the customer made a deposit to guarantee the booking. This variable can assume three categories:<br>No Deposit -- no deposit was made;<br>Non Refund -- a deposit was made in the value of the total stay cost;<br>Refundable -- a deposit was made with a value under the total cost of stay.                                                                                                                        |
+| agent                          | character | ID of the travel agency that made the booking                                                                                                                                                                                                                                                                                                                                                                                          |
+| company                        | character | ID of the company/entity that made the booking or responsible for paying the booking. ID is presented instead of designation for anonymity reasons                                                                                                                                                                                                                                                                                     |
+| days_in_waiting_list           | double    | Number of days the booking was in the waiting list before it was confirmed to the customer                                                                                                                                                                                                                                                                                                                                             |
+| customer_type                  | character | Type of booking, assuming one of four categories:<br>Contract - when the booking has an allotment or other type of contract associated to it;<br>Group -- when the booking is associated to a group;<br>Transient -- when the booking is not part of a group or contract, and is not associated to other transient booking;<br>Transient-party -- when the booking is transient, but is associated to at least other transient booking |
+| adr                            | double    | Average Daily Rate as defined by dividing the sum of all lodging transactions by the total number of staying nights                                                                                                                                                                                                                                                                                                                    |
+| required_car_parking_spaces    | double    | Number of car parking spaces required by the customer                                                                                                                                                                                                                                                                                                                                                                                  |
+| total_of_special_requests      | double    | Number of special requests made by the customer (e.g. twin bed or high floor)                                                                                                                                                                                                                                                                                                                                                          |
+| reservation_status             | character | Reservation last status, assuming one of three categories:<br>Canceled -- booking was canceled by the customer;<br>Check-Out -- customer has checked in but already departed;<br>No-Show -- customer did not check-in and did inform the hotel of the reason why                                                                                                                                                                       |
+| reservation_status_date        | double    | Date at which the last status was set. This variable can be used in conjunction with the ReservationStatus to understand when was the booking canceled or when did the customer checked-out of the hotel                                                                                                                                                                                                                               |

@@ -1,0 +1,250 @@
+---
+title: "HW6: Forecasting Zion National Park Visitors"
+author: Ethan Nelson
+format: 
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+```{r}
+#| include: false
+# load packages
+library(tidyverse)
+library(scales)
+```
+
+## Problem 1: Zion National Park Annual Visitors
+
+**Data:**
+
+You are asked to predict the annual number of visitors to Zion National Park for the next five years so the Park Service can plan and prepare for the future using data from the US National Park Service.
+
+**Import:**
+
+The US National Park Service collects an impressive amount of data on the number of visitors to our national parks. For this assignment use the National Park Service Visitor Use Statistics webpage at <https://irma.nps.gov/Stats/> for data from a selected national park.
+
+Choose `Zion NP (ZION)` in the [**Select a Park**]{style="background-color: Linen; color: SaddleBrown;"} pull down menu. Choose *Annual Park Recreation Visitation (1919-Last Calendar Year).* Download the data as a CSV file.
+
+[***1(a). Import data into a dataframe called `zion`.***]{style="color:royalblue;"}
+
+Note: the first row says "Title", second row has the park, third row is blank ... the 4th row has column names, so use the `skip` argument.
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+zion <- read_csv("ZionVisitors.csv",
+                 skip = 3)
+```
+
+**Wrangling:**
+
+**Note:** You will need to set `eval: true` when you have the dataset `zion` created in the step above.
+
+```{r}
+#| eval: true
+tail(zion)
+```
+
+[***1(b). Write code that will:***]{style="color:royalblue;"}
+
+-   [Change the units of `RecreationVisitors` by a million so that the values in the column will be "millions of visitors."]{style="color:royalblue;"}
+
+-   [Drop the column `TotalRecreationVisitors`]{style="color:royalblue;"}
+
+**Note:** You will need to set `eval: true` when you have the dataset `zion` created in the step above.
+
+```{r}
+#| eval: true
+zion <- zion |>
+  mutate(RecreationVisitors = RecreationVisitors/1000000) |>
+  select(-TotalRecreationVisitors)
+
+tail(zion)
+```
+
+**EDA:**
+
+[***1(c). Plot the time series for Zion NP Visitors.***]{style="color:royalblue;"}
+
+**Note:** The park was created in 1904 and the first record of visitors was 1919.
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+ggplot(zion, aes(x = Year, y = RecreationVisitors)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Recreational Visitors to Zion National Park",
+    x = NULL, 
+    y = "Annual Visitors (millions)",
+    )
+```
+
+[***1(d). Plot the time series for Zion NP Visitors since 1950.***]{style="color:royalblue;"}
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+zion |>
+  filter(Year >= 1950) |>
+ggplot(aes(x = Year, y = RecreationVisitors)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Recreational Visitors to Zion National Park",
+    x = NULL, 
+    y = "Annual Visitors (millions)",
+    )
+```
+
+[***1(e). Reflect:***]{style="color:royalblue;"}
+
+Prompt: What is the trend of the recent past? Is there anything unusual?
+
+Attendance at Zion has grown consistently in a mostly linear form ever since 1950, with a massive jump beginning in approximately 2013, with a momentary drop off in 2020 as the park was closed for about a month, but then became one of the only attractions that was open to the public during the pandemic, so demand was significantly heightened but the supply of access to the park was severely limited due to public health guidelines. It appears as though the general public fell in love with Zion as there was a noticeable leap to an all time high in terms of attendance in 2021.
+
+**Model:**
+
+[***1(f). Consider a log-transformation to satisfy the ARIMA(1,1,1) model assumptions. Plot the time series for Zion NP Visitors since 1950 with the vertical axis `log(RecreationVisitors)`***]{style="color:royalblue;"}
+
+**Note:** You will need to set `eval: true` when you have the dataset `zion` created in the step above.
+
+```{r}
+#| eval: true
+zion |>
+  filter(Year >= 1950) |>
+  ggplot(aes(x = Year, y = log(RecreationVisitors))) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "Recreational Visitors to Zion National Park",
+    x = NULL, 
+    y = "Annual Visitors (millions)",
+    )
+```
+
+[***1(g). Reflect:***]{style="color:royalblue;"}
+
+Prompt: Does the log-transformation better satisfy the model assumptions of a constant trend and equal variance?
+
+Yes, the log-transformation does better satisfy the model assumptions of a constant trend and equal variance. We can see this visually as the second graph that includes the log transformation has a smoother line and less deviation from the line of best fit from year to year, enhanced visually by the inclusion of both the geom_line and geom_point functions, best demonstrated by a slice of the total dataset from approximately 1980-2015 specifically.
+
+Fit an ARIMA$(1, 1, 1)$ model and report the parameter estimates and standard errors.
+
+**Note:** You will need to set `eval: true` when you have the dataset `zion` created in the step above. The code for the ARIMA model does not require any editing.
+
+```{r}
+#| eval: true
+
+# fit model and report parameter estimates and standard errors
+zion1950 <- zion |>
+  filter(Year > 1950) |>
+  mutate(lnVisitors = log(RecreationVisitors))
+
+zion1950_out <- arima(zion1950$lnVisitors, order = c(1, 1, 1))
+
+# table of estimates and se
+zion1950_out
+```
+
+Forecast the annual visitors (in millions) for the next 5 years. Report a table of predictions and 95% prediction intervals.
+
+**Note:** You will need to set `eval: true` when you have the dataset `zion` created in the step above. The code for the ARIMA model predictions does not requre any editing.
+
+```{r}
+#| eval: true
+
+# predict log-annual visitors for next 5 years
+zion_forecast <- data.frame(Year = max(zion1950$Year) + (1 : 5))
+zion_yhat <- predict(zion1950_out, n.ahead = 5)
+
+# table of forecasts and uncertainty
+
+# compute 95% prediction intervals of log-annual visitors
+zion_forecast$pred <- zion_yhat$pred
+zion_forecast$L <- zion_yhat$pred - 2 * zion_yhat$se
+zion_forecast$U <- zion_yhat$pred + 2 * zion_yhat$se
+
+# table of un-transformed predictions for next 5 years
+zion_forecast$pred <- exp(zion_forecast$pred)
+zion_forecast$L <- exp(zion_forecast$L)
+zion_forecast$U <- exp(zion_forecast$U)
+
+zion_forecast
+```
+
+## Share
+
+[***1(h). Summarize the analysis.***]{style="color:royalblue;"}
+
+Prompt: Where is Zion National Park? Why did you go or why do you want to?
+
+Zion National Park is in Southern Utah, located near Springdale. I actually didn't want to go the first time I visited with my boy scout troop when I was 14, but I chose to return of my volition with a group of friends during my freshman year as we were seeking an affordable getaway within driving distance.
+
+Prompt: Write a paragraph about the creation of the national park.
+
+A group of federal surveyors visited the area in 1908 and thought so highly of the scenery that they recommended to President Taft that he come view it for himself. He was likewise impressed and designated the area as a National Monument and included over 16,000 acres in that designation. Nine years later, the area
+
+Prompt: Did the pandemic impact visitation?
+
+Yes, the pandemic absolutely impacted visitation. I believe I spoke about this earlier but the park was closed for a little over a month during the COVID pandemic, and then demand and interest skyrocketed as the National Parks were among the few activities people could still get out of their house and participate in as most other activities had been shuttered during this time of our lives. Following the reopening of most activities, Zion remained popular and in 2021, the park saw it's highest attendance ever.
+
+Create a graphic showing the historical values and the 5 year predictions (with uncertainty) of annual visitors (in millions).
+
+**Note:** You will need to set `eval: true` when you have the dataset `zion` created in the step above. The code for the graphic does not requre any editing.
+
+```{r}
+#| eval: true
+
+ggplot(zion_forecast, aes(x = Year, y = pred)) +
+  geom_line(col = "forestgreen") + 
+  geom_line(aes(x = Year, y = L), col = "forestgreen", linetype = 2) + 
+  geom_line(aes(x = Year, y = U), col = "forestgreen", linetype = 2) +
+  geom_line(data = zion, aes(x = Year, y = RecreationVisitors)) +
+  xlim(2000, 2030) + ylim(2.0, 7.0) +
+  labs(
+    title = "Zion NP",
+    x = NULL, 
+    y = "Annual Visitors (in millions)"
+    )
+```
+
+## Problem 2. Ethics
+
+**Note:** The following questions ask you to summarize articles on data science ethics. You are not allowed to use Chat GPT or similar tools in answering these questions – you must actually read the articles and summarize them yourself. Please be ethical, at a minimum when discussing ethics!
+
+[***2(a). Terms of Service.***]{style="color:royalblue;"}
+
+For each of the following websites, first determine whether you're allowed to scrape data from them using tools we've learned in this course.
+
+Then, read (the relevant portions of their) Terms of Use/Service.
+
+-   ESPN: [https://www.espn.com](https://www.espn.com/) / <https://disneytermsofuse.com/english/#License-Grant-and-Restrictions>
+-   X/Twitter: [https://twitter.com](https://twitter.com/) / <https://twitter.com/en/tos>
+-   Rotten Tomatoes: [https://www.rottentomatoes.com](https://www.rottentomatoes.com/) / <https://www.rottentomatoes.com/policies/terms-of-use>
+
+Finally, summarize your findings about whether you can or cannot scrape data from these websites in 1 sentence for each website. Additionally, quote the relevant sentence(s) from the Terms of Use/Service.
+
+For Disney and any subsidiaries included in the provided licensing agreement, specifically ESPN, users are not allowed to, "...extract Disney Products using...data mining or web scraping or otherwise compiling "...without express written permission." In a statement, No, we cannot scrape without direct permission in writing.
+
+For X and it's users, we are told we, "...must abide by the Services' acceptable use terms....mean(ing) that you cannot scrape the Services without X's express written permission." Similarly to Disney and ESPN, No, we cannot scrape without explicit authorization in writing.
+
+For Rotten Tomatoes, they claim Proprietary Rights over the information on their website. With regards to web scraping specifically, the terms dictate that we can't, "...scrape, data mine, or aggregate any content or any portion of the Services for any purpose." In summary, we also can't scrape data from Rotten Tomatoes either for any purpose.
+
+**Hint:** In the Terms of Use/Service documents, it might be productive to search for keywords like "scrape" or "scraping" to find the relevant portions.
+
+[***2(b). Acceptable Use.***]{style="color:royalblue;"}
+
+One current ethical discussion in data science involves the training of "Large Language Models" such as ChatGPT. These models are trained using massive corpora (document sets) that include large amounts of work that is covered under copyright law. Read the following two articles:
+
+-   [Do Large Language Models Violate Copyright Law?](https://www.dykema.com/news-insights/do-large-language-models-violate-copyright-law.html)
+-   [Reexamining "Fair Use" in the Age of AI](https://hai.stanford.edu/news/reexamining-fair-use-age-ai)
+
+Write a short paragraph (maximum 8 sentences) discussing the arguments on both sides of the discussion over copyright in training large language models.
+
+The use of copyrighted materials for the purposes of training generative AI models is a complicated and nuanced issue that falls squarely within a legal and even moral gray area. On the side of the creator and copywriter, the use of their material for the purpose of making money would appear to fall directly within existing legal precedent that this would not be appropriate. Furthermore, the products churned out by Gen AI models are often quite similar to the original work of the creator. It is also contended that the largest source of information used for these models are illegal and non compliant with US Copyright laws. On the other hand, Gen AI backers argue that the libraries that they allegedly sourced this data from is the problem, not Gen AI or the developers themselves. Additionally, the creators argue that it would still be fine if they had purchased the materials directly from the original creators and used that to train their models. Many supporters of Gen AI also argue that humans are taught and trained in the exact same way that Gen AI was, as a derivation from previous works, but that such educational purposes don't constitute copyright violation.

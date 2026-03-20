@@ -1,0 +1,402 @@
+---
+title: "HW 5: Baseball"
+author: Ethan Nelson
+format: 
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+# Use of GenAI on this assignment
+
+Include one of the following with your assignment:
+
+**Grade for Full Credit:** This represents my own work with NO GenAI usage. Max 10 points.
+
+Note: if both statements are included it will be graded with penalty.
+
+## Lahman's Baseball Database
+
+The Lahman Baseball database is an open source collection of baseball statistics. This database contains pitching, hitting, and fielding statistics for Major League Baseball from 1871 through the last completed season. It includes data from the two current leagues (American and National), the four other "major" leagues (American Association, Union Association, Players League, and Federal League), and the National Association of 1871-1875.
+
+This database was created by Sean Lahman, who pioneered the effort to make baseball statistics freely available to the general public. What started as a one man effort in 1994 has grown tremendously, and now a team of researchers have collected their efforts to make this the largest and most accurate source for baseball statistics available anywhere.
+
+The main form of this database is a relational database. The design follows these general principles: Each player is assigned a unique code (`playerID`). All of the information in different tables relating to that player is tagged with his `playerID`. The `playerIDs` are linked to names and birthdates in the `People` table. Similar links exist among other tables via analogous `*ID` variables.
+
+The database is composed of the following main tables:
+
+`People` Player names, dates of birth, death and other biographical info
+
+`Batting` batting statistics
+
+`Pitching` pitching statistics
+
+`Fielding` fielding statistics
+
+A collection of other tables is also provided. [The many files and their linkages](https://github.com/cdalzell/Lahman/blob/master/man/figures/Lahnan-db-diagram.jpg)
+
+**Import:**
+
+```{r}
+#| warning: false
+#| message: false
+library(tidyverse)
+library(Lahman)
+library(dplyr)
+```
+
+[***Problem 1. Create a table of the Top 5 countries of players.***]{style="color:royalblue;"}
+
+```{r}
+#| eval: true
+
+# Look at the People dataset
+People |>
+  slice_sample(n = 5)
+```
+
+Thinking:
+
+-   create `nCountry` from `People` using `group_by` on `birthCountry`
+
+    -   note: `People` has a row for each player so the number of players from each country can use `count`
+
+-   sort the dataset largest to smallest tally
+
+-   print only the first 5 rows
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+nCountry <- People |>
+  group_by(birthCountry) |>          
+  summarize(n = n(), .groups = 'drop') |>
+  arrange(desc(n))
+print(nCountry, n = 5)
+```
+
+[***Problem 2. Create a table of Bryce Harper's home runs and walks by year.***]{style="color:royalblue;"}
+
+Datasets to use:
+
+We learned about the `People` dataset above.
+
+```{r}
+#| eval: true
+# Look at the Batting dataset
+glimpse(Batting)
+```
+
+Thinking:
+
+-   filter `People` to a single row with Bryce Harper (`nameFirst`, `nameLast`)
+
+-   join result with `Batting`
+
+-   print columns `yearID`, `HR`, `BB`
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+BryceBombs <- People |>
+  filter(nameFirst == "Bryce", nameLast == "Harper") |>
+  full_join(Batting, by = "playerID") |>
+  select(yearID, HR, BB)
+print(BryceBombs)
+```
+
+[***Problem 3. What does the `distinct` function do?***]{style="color:royalblue;"}
+
+Your answer should refer to \[https://r4ds.hadley.nz/data-transform.html#distinct\\\](https://r4ds.hadley.nz/data-transform.html#distinct){.uri} and what is demonstrated in the following code and the `HallOfFame` dataset.
+
+The distinct function will, "find all the unique rows in a dataset, so technically, it primarily operates on the rows." In my own words, this function will select the unique or recognizably different outputs from each row, although it can be used on columns by supplying column names.
+
+In this context, it is finding the ten most distinct or outstanding players, in a good way that is rather than the bottom ten, and compiling them into a list. Theoretically, this would provide us with a top ten list of the greatest baseball players of all time through qualitative data.
+
+```{r}
+HallOfFame |>
+  arrange(playerID) |>
+  head(10)
+
+HallOfFame |>
+  distinct(playerID) |>
+  arrange(playerID) |>
+  head(10)
+
+HallOfFame |>
+  distinct(playerID, .keep_all = TRUE) |>
+  arrange(playerID) |>
+  head(10)
+```
+
+[***Problem 4. Who are all the BYU players considered for the Hall of Fame?***]{style="color:royalblue;"}
+
+Datasets to use:
+
+```{r}
+#| eval: true
+Schools |>
+  slice_sample(n = 5)
+
+CollegePlaying |>
+  slice_sample(n = 5)
+
+HallOfFame |>
+  arrange(playerID) |>
+  head()
+```
+
+Thinking:
+
+-   filter `Schools` to a single row with "Brigham Young University" (`name_full`)
+
+-   join result with `CollegePlaying`
+
+    note: complication is rows are player-year and only want player once
+
+-   join the result with `HallOfFame`
+
+    note: complication is rows are player-year and only want player once
+
+-   join the result with `People` to get name (don't report `playerID`)
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+ByuStuds <- Schools |>
+  filter(name_full == "Brigham Young University") |>
+  select(schoolID) |>
+  distinct() |>
+
+  inner_join(CollegePlaying, by = "schoolID") |>
+  select(playerID) |>
+  distinct() |>
+
+  inner_join(HallOfFame, by = "playerID") |>
+  select(playerID) |>
+  distinct() |>
+
+  inner_join(People, by = "playerID") |>
+  select(nameFirst, nameLast) |>
+  distinct()
+
+print(ByuStuds)
+```
+
+[***Problem 5. Did Hall of Fame inducted players receive more awards than players who were nominated but not inducted?***]{style="color:royalblue;"}
+
+Datasets to use:
+
+We learned about the `HallOfFame` dataset above. Recall that there is a row for each year a player is considered. Some are "first ballot Hall of Fame" but others are considered several years before being included or not.
+
+First, how many players have been on the ballot and how many inducted in the Hall of Fame? 6,010 different players have met the qualifications to be considered on the ballot but ultimately not received the necessary votes from the BBWAA to be inducted into the Hall of Fame.
+
+```{r}
+HallOfFame |>
+  group_by(inducted) |>
+  count()
+```
+
+Next learn a little about the `AwardsPlayers` dataset.
+
+```{r}
+glimpse(AwardsPlayers)
+
+AwardsPlayers |>
+  arrange(playerID) |>
+  head()
+```
+
+Now answer the question "Did HOF inducted players receive more awards than players who were nominated but not inducted?"
+
+Thinking:
+
+-   create `nAwards` from `AwardsPlayers` using `group_by` on `playerID`
+
+    -   note: `AwardsPlayers` has a row for each award a player receives so the number of awards can use `count`
+
+-   reduce `HallOfFame` to a single row for each player with `distinct`
+
+    -   note: include the `.keep_all = TRUE` argument because we will be using `inducted` later
+
+-   join result with `nAwards`
+
+-   compute the mean number of awards for inducted or not using `group_by` and `summarize`
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+First create `nAwards`
+
+```{r}
+nAwards <- AwardsPlayers |>
+  group_by(playerID) |>
+  count(name = "n_awards")
+head(nAwards)
+```
+
+Then
+
+```{r}
+HallOfFameDifferent <- HallOfFame |>
+  distinct(playerID, .keep_all = TRUE)
+
+HOFWithWins <- HallOfFameDifferent |>
+  left_join(nAwards, by = "playerID")
+
+AwardComps <- HOFWithWins |>
+  group_by(inducted) |>
+  summarize(mean_awards = mean(n_awards, na.rm = TRUE), .groups = "drop")
+
+print(AwardComps)
+```
+
+[***Problem 6. Create a graphic of the homeruns and stolen bases by salary in a year.***]{style="color:royalblue;"}
+
+Power and Speed are two skills that are rarely displayed by the same player. For example, Shohei Ohtani was the first "50-50" player having more than 50 homeruns (power) and more than 50 stolen bases (speed). If this is a highly valued skill it may translate into higher paid players
+
+We learned about the `Batting` dataset above and will use `HR` and `SB`.
+
+```{r}
+# Look at the Salaries dataset
+glimpse(Salaries)
+```
+
+Thinking:
+
+-   join `Batting` and `Salaries`
+
+-   the `Salaries` dataset is incomplete with `NA` for player-year where it is not available (remove these rows)
+
+-   create a new column `tier` that is a `factor` with levels `<$1MM`, `$1MM - $5MM`, `>$5MM` ("\$MM" is million USD) using `case_when`
+
+Note: to add a reference line where homeruns and stolen bases are equal, look at `geom_abline` (it's used in the book example <https://r4ds.hadley.nz/numbers.html#center> )
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#clean our data and hit it with an na.omit
+SalariesClean <- Salaries |>
+  filter(!is.na(salary))
+#join it all together
+BattingSalaries <- Batting |>
+  inner_join(SalariesClean, by = c("playerID", "yearID", "teamID"))
+# create tier column for bullet pt 3
+BattingSalaries <- BattingSalaries |>
+  mutate(tier = case_when(
+    salary < 1e6 ~ "<$1MM",
+    salary >= 1e6 & salary <= 5e6 ~ "$1MM - $5MM",
+    salary > 5e6 ~ ">$5MM"
+  ))
+#wrap it all up
+print(BattingSalaries)
+```
+
+[***Problem 7. For players who receive the Gold Glove Awards, compute the total HRs by year and then plot.***]{style="color:royalblue;"}
+
+In early baseball there was an accepted trade-off between offense and defense skills. Over time some players are excelling at both. The Gold Glove awards recognize the best defensive players at each position and homeruns measure offense.
+
+Datasets to use:
+
+We learned about the `AwardsPlayers` dataset and the `Batting` dataset above.
+
+Thinking:
+
+-   filter `AwardsPlayers` to a Gold Glove winners
+
+    -   note: the `AwardsPlayers` dataset has many different awards among the rows, and you only want rows with `awardID` matching `Gold Glove`
+
+-   join result with `Batting` to create the dataset `GG_hr`
+
+    -   note: each row of both datatsets is a player-year so the join needs to match on both keys using the argument `by = c("playerID", "yearID")`
+
+-   compute the number of homeruns for each year using `group_by` with `yearID` and `summarize` with the `sum` function
+
+-   make a time series plot of `ASG_hr` with `yearID` on the horizontal axis and the number of homeruns on the vertical axis
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+First create `GG_hr`
+
+```{r}
+GG_hr <- function(AwardsPlayers, Batting) {
+  GoldGloveWinners <- AwardsPlayers |>
+    filter(awardID == "Gold Glove")
+  GG_hr_data <- GoldGloveWinners |>
+    inner_join(Batting, by = c("playerID", "yearID")) |>
+    group_by(yearID) |>
+    summarize(total_HR = sum(HR, na.rm = TRUE), .groups = "drop")
+  return(GG_hr_data)
+}
+```
+
+Then create graphic
+
+```{r}
+library(ggplot2)
+
+GG_hr_data <- GG_hr(AwardsPlayers, Batting)
+
+ggplot(GG_hr_data, aes(x = yearID, y = total_HR)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(
+    title = "Home Runs by Gold Glove Winners Over Time",
+    x = "Year",
+    y = "Total Home Runs"
+  ) +
+  theme_minimal()
+```
+
+[***Problem 8. Using the `People` dataset what are the 10 most common last names? (use `nameLast`)***]{style="color:royalblue;"}
+
+```{r}
+find_last_names <- People |>
+  group_by(nameLast) |>
+  summarize(count = n(), .groups = "drop") |>
+  arrange(desc(count)) |>
+  slice_head(n = 10)
+
+print(find_last_names)
+```
+
+[***Problem 9. Using the `Parks` dataset what are the 10 ballparks with the most words in their name? (use `park.name`) Report the table of name, city, and state.***]{style="color:royalblue;"}
+
+```{r}
+library(stringr)
+lengthiest_stadium_names <- Parks |>
+  mutate(word_count = str_count(park.name, "\\S+")) |>
+  arrange(desc(word_count)) |>
+  slice_head(n = 10) |>
+  select(park.name, city, state, word_count)
+
+print(lengthiest_stadium_names)
+
+```
+
+## Stretch Exercise:
+
+Identify the most successful teams in terms of winning percentage over the last 10 years. Create `BestPlayersOnBestTeams` containing the batting stats for the players on the top 5 teams?
+
+Datasets to use:
+
+-   `Teams`: Contains information about baseball teams, including team name, league, and year-specific performance data such as wins and losses.
+
+-   `Batting`
+
+-   `People`
+
+Thinking:
+
+-   Calculate the winning percentage for each team in the last 10 years. Winning percentage can be calculated as (wins / (wins + losses)).
+
+-   Rank the teams based on their winning percentage.
+
+-   Select the top 5 teams and create a table displaying the team name, league, year, and winning percentage (If a team is in the top 5 twice, you can either add another team or leave it)
+
+-   Join the Team IDs with the batting dataset to get the individual batting stats
+
+-   Calculate the average batting average (H/AB) and home runs (HR) for players in these top teams ("AB" will have to be filtered to \> 0 to not include games where the players didn't play).
+
+-   Create `BestPlayersOnBestTeams` including team name, year, player name, batting average, and home runs.

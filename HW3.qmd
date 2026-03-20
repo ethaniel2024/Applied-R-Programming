@@ -1,0 +1,251 @@
+---
+title: "HW 3: Mortgage Rates"
+author: Ethan Nelson
+format: 
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+## Problem 1 (Time Series Plots)
+
+**Data:**
+
+Housing is often a barometer for how people feel about the economy. Interest rates for mortgages are also the lowest of the interest rates for other personal borrowing.
+
+Freddie Mac, a publicly traded government-sponsored enterprise focused on providing an affordable supply of mortgages across the US, shares the weekly average 30-year fixed mortgage rate. The average is over applications that week.
+
+Details at <https://fred.stlouisfed.org/series/MORTGAGE30US>
+
+**Import & Wrangling:**
+
+```{r}
+#| warnings: false
+#| output: false
+#| code-fold: true
+library(tidyverse)
+library(scales)
+
+rate <- read_csv("https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US")
+
+# choose a better column name than FRED id
+rate <- rate |>
+  rename(Mortgage = MORTGAGE30US)
+```
+
+**EDA:**
+
+Most recent observations:
+
+```{r}
+tail(rate, 8)
+```
+
+[***1(a). Make a time series plot of mortgage rates. Add meaningful axis labels and a title.***]{style="color:royalblue;"}
+
+(A little bit of starter code is provided below, and the code chunk is set to not be evaluated with `eval: false` because the current code in there is not valid code and hence the document wouldn't render. Once you replace the code with valid code, set the chunk option to `eval: true`, or remove the `eval` option altogether since it's set to `true` by default.)
+
+```{r}
+#| eval: true
+
+ggplot(rate, aes(x = DATE, y = Mortgage)) +
+  geom_line() +
+  labs(x = "Year", y = "Interest Rate",
+       title = "A Simple Visual of Mortgage Rates in America")
+```
+
+[***1(b). Create a time series plot of mortgage rates since 2000. Add vertical lines to identify the election day of each US President and annotate the President's name.***]{style="color:royalblue;"}
+
+```{r}
+#| eval: true
+election_dates <- ymd(c("2000-11-07", "2004-11-02", "2008-11-04", "2012-11-06", "2016-11-08", "2020-11-03"))
+presidents <- c("George W. Bush", "George W. Bush", "Barack Obama", "Barack Obama", "Donald Trump", "Joe Biden")
+ggplot(rate, aes(x = DATE, y = Mortgage)) +
+  geom_line() +
+  labs(
+    title = "Reflecting Mortgage Rates Since the Hanging Chad Crisis",
+    x = "Year",
+    y = "Interest Rate"
+  ) +
+  scale_x_date(limits = c(ymd("2000-11-07"), today())) + 
+  geom_vline(xintercept = as.numeric(election_dates), linetype = "dotted", color = "brown1") +
+  annotate("text", x = election_dates, y = max(rate$Mortgage) * 0.73,label = presidents, angle = 90, vjust = -0.5, hjust = 0, size = 3.5)
+```
+
+[***1(c). Make a time series plot of mortgage rates from the date you started high school to now.***]{style="color:royalblue;"}
+
+```{r}
+finale_dates <- ymd(c("2016-11-02", "2017-11-01", "2018-10-28", "2019-10-30", "2020-10-27", "2021-11-02", "2022-11-05", "2023-11-01"))
+WorldSeries_Victors <- c("Cubs", "Astros", "Red Sox", "Nationals", "Dodgers", "Braves", "Astros", "Rangers")
+ggplot(rate, aes(x = DATE, y = Mortgage)) +
+  geom_line() +
+  labs(
+    title = "Reflecting Mortgage Rates Since Life Added 'rEsPoNSiBiLiTiEs'",
+    x = "Year",
+    y = "Interest Rate"
+  ) +
+  scale_x_date(limits = c(ymd("20160803"), today())) +
+  geom_vline(xintercept = as.numeric(finale_dates), linetype = "solid", color = "skyblue1") +
+  annotate("text", x = finale_dates, y = max(rate$Mortgage) * 0.8154, 
+           label = WorldSeries_Victors, angle = 90, vjust = -0.5, hjust = 0, size = 3.5)
+```
+
+**Share:**
+
+[***1(d). Prompt: What should someone know about the current mortgage rate compared to when you started high school?***]{style="color:royalblue;"}
+
+Mortgage rates have fluctuated greatly. Fortunately for those viewing this graph seeking intrigue, it has been eight years since I first began high school. Rates were up and down and decreased heading a new decade, and plummeted when the global Covid-19 pandemic reached the United States. This was a fascinating revelation for me as most people I talk to about this topic blame Covid for the crash, but this clearly demonstrates that interest rates were declining for some time beforehand. However, the Atlanta Braves won the 2021 World Series and interest rates began to skyrocket. Can we say the two are related? Objectively, this is a prime example of spurious correlation, but I am a huge baseball fan and am somewhat fond of the Braves, so I'll concur with the statistical evaluation as it is quite convenient. However, my favorite team's rival won the 2020 World Series and I must say I am quite disappointed I could not blame the sharp increase in interest rates and subsequent problems associated with such on the LA Dodgers. Rates are beginning to come back down and it is neat to see in the graph that although the correlation is entirely spurious, the Texas Rangers won their first World Series in franchise history and rates began to decline once again. They still have yet to reach pre pandemic levels over a sustained period of time.
+
+## Problem 2 (Tidy Data)
+
+[***#2(a). Why is this global temperature dataset untidy?***]{style="color:royalblue;"}
+
+There are a handful of problems with this data set, firstly that the values on the far right are not defined. We have something of an explanation for what DJF stands for, but I don't know what MAM or JJA stand for. Secondly, the row has the years unreliably mixed in with the temperatures instead of at the start or in another consistent location. We need one type and year per row. It did help to assign degree type to rows, and time to columns, but we just need to take it a step further to clean everything up nicely.
+
+```{=html}
+<pre>
+        GLOBAL Land-Ocean Temperature Index in 0.01 degrees Celsius   base period: 1951-1980
+
+                    sources:  GHCN-v4 1880-08/2024 + SST: ERSST v5 1880-08/2024
+                    using elimination of outliers and homogeneity adjustment
+                    Notes: 1950 DJF = Dec 1949 - Feb 1950 ;  ***** = missing
+
+                                                                     AnnMean
+Year   Jan  Feb  Mar  Apr  May  Jun  Jul  Aug  Sep  Oct  Nov  Dec    J-D D-N    DJF  MAM  JJA  SON  Year
+2021    81   64   89   76   79   84   92   82   92   99   93   87     85  84     75   81   86   95  2021
+2022    91   89  105   84   84   92   94   95   89   96   73   80     89  90     89   91   94   86  2022
+2023    87   96  122   99   94  108  119  119  148  134  142  135    117 112     88  105  115  141  2023
+2024   124  143  140  132  116  125  121  130 **** **** **** ****   **** ***    134  130  125 ****  2024
+Year   Jan  Feb  Mar  Apr  May  Jun  Jul  Aug  Sep  Oct  Nov  Dec    J-D D-N    DJF  MAM  JJA  SON  Year
+
+Divide by 100 to get changes in degrees Celsius (deg-C).
+Multiply that result by 1.8(=9/5) to get changes in degrees Fahrenheit (deg-F).
+
+Example      --      Table Value :      40
+                          change :    0.40 deg-C  or  0.72 deg-F
+</pre>
+```
+[***2(b).***]{style="color:royalblue;"}
+
+Your football team is losing by four points. Time is running out in the first half, it is fourth down with two yards to go, and you need a first down to keep from losing possession of the ball. The quarterback must make a decision: run for two or pass. He calls a timeout to confer with the offensive coach, who has kept a record of the outcome of each offensive play in the first half of the game. His data is summarized as:
+
+```{=html}
+<pre>
+ Pass Plays    Run Plays
+ 31 15 8  0    10 8 8 6
+  0  0 0 -1     4 3 3 3  
+-15             2 2 1 0
+</pre>
+```
+[***Why is this dataset untidy?***]{style="color:royalblue;"}
+
+The biggest issue here is that we have two different datasets. We need one set with one type of play per column and yardage per play in each row. A personal gripe is that it doesn't specify the units, are we to assume that the numbers represent feet, inches, yards?
+
+[***2(c).***]{style="color:royalblue;"}
+
+What affects my commute time? I performed a randomized experiment during May and April. Each MWF morning I randomly selected a one of our family cars and timed the commute from Mapleton to BYU.
+
+Data:
+
+```{r}
+#| code-fold: true
+commute <- read_table("
+Vehicle Rep1 Rep2 Rep3 Rep4 Rep5 Rep6
+Truck    24   23   21   23   25   26
+Hybrid   27   28   28   29   29   27
+BMW      20   23   22   25   21   20
+")
+```
+
+```{r}
+```
+
+[***Make this dataset tidy and create a side-by-side boxplot to compare the commute time by vehicle.***]{style="color:royalblue;"}
+
+```{r}
+commute |>
+  pivot_longer(
+    cols = c(Rep1, Rep2, Rep3, Rep4, Rep5, Rep6),
+    names_to = "Attempt",
+    values_to = "DriveTime"
+  ) |> 
+ggplot(aes(x = Vehicle, y = DriveTime)) +
+    geom_boxplot(color="black", 
+                 fill=c("cyan", "brown", "green")) +
+    labs(
+      x = "Vehicle Used",
+      y = "Drive Time (minutes)",
+      title = "Randomized Experiment with 6 Replicates"
+    ) +
+    theme_minimal()
+```
+
+## Problem 3 (Wrangling Data)
+
+Utah is home to a collection of colleges and universities.
+
+Data:
+
+```{r}
+#| code-fold: true
+utah <- read_table("
+name founded location type enrollment
+BYU 1875 Provo Private 34499
+UofU 1850 SLC Public 35310
+UtahState 1888 Logan Public 28063
+UVU 1941 Orem Public 44653
+SUU 1897 CedarCity Public 15033
+Weber 1889 Ogden Public 30536
+UtahTech 1911 StGeorge Public 12567
+Westminster 1875 SLC Private 1266
+WGU 1996 Online Private 121437
+Snow 1888 Ephraim Public 5900
+SLCC 1948 SLC Public 26300
+Ensign 1886 SLC Private 2200
+MTECH 1989 Lehi Public 4034
+")
+```
+
+```{r}
+utah
+```
+
+[***#3(a). Who are the "big" schools?***]{style="color:royalblue;"}
+
+Fill in the blanks for filtering `utah` where the `enrollment` is larger than 30,000.
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+
+utah |>
+  filter(enrollment >= 30000)
+```
+
+[***#3(b). Who are the `Private` schools?***]{style="color:royalblue;"}
+
+Fill in the blanks for filtering `utah` where the `type` is `Private`.
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+
+utah |>
+  filter(type == "Private")
+```
+
+[***#3(c). Who are the schools located in Salt Lake City (`SLC`)? Report only the name of the schools.***]{style="color:royalblue;"}
+
+Fill in the blanks for filtering `utah` appropriately and then pipe the result into `select` to produce a list of just the school names.
+
+**Note:** You will need to set `eval: true` when you have an answer you want to try out.
+
+```{r}
+#| eval: true
+
+utah |>
+  filter(location == "SLC") |>
+  select(name)
+```

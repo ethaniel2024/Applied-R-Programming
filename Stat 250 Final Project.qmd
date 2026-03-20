@@ -1,0 +1,91 @@
+---
+title: "Stat 250 Final Project"
+format: pdf
+editor: visual
+---
+
+## Here is the code from Colab
+
+```{r}
+library(tidyverse)
+```
+
+Set up the libraries and packages we need.
+
+```{r}
+# read in data
+tobacco <- read_csv("tu_new.csv")
+data <- read_csv("11_new.csv")
+```
+
+Read in the data.
+
+```{r}
+#EDA/Wrangling
+# remove columns record, agesmk, smokstat, curruse, and everuse from main data frame (they're all empty)
+data$agesmk <- NULL
+data$smokstat <- NULL
+data$curruse <- NULL
+data$everuse <- NULL
+
+# select needed columns from tobacco data
+tobacco <- tobacco |> select(record, agesmk, smokstat, curruse, everuse)
+
+# join by person ID ("record") to create cod_data
+cod_data <- data |> left_join(tobacco, by = "record")
+```
+
+Tidy the data and set it up how we want it structured
+
+```{r}
+# rename columns
+cod_data <- cod_data |>
+  rename(marital.status = ms, weight = wt, employment = esr, income = adjinc,
+         death.status = inddea, cause = cause113, age.smoke = agesmk, smoke.status = smokstat)
+```
+
+```{r}
+# rename column values
+cod_data <- cod_data |>
+  mutate(marital.status = case_when(marital.status == 5 ~ "Never Married", marital.status == 4 ~ "Separated", marital.status == 3 ~ "Divorced", marital.status == 2 ~ "Widowed", marital.status == 1 ~  "Married", marital.status <1 | marital.status > 5 ~ "Unknown/Person less than 15")) |>
+  mutate(death.status = case_when(death.status == 1 ~ "Dead", death.status != 1 ~ "Alive")) |>
+  mutate(employment = case_when(employment == 1 ~ "Employed", employment == 2 ~ "Absent from Work", employment == 3 ~ "Unemployed", employment == 4 ~ "Disabled", employment == 5 ~ "Retired")) |>
+  mutate(urban = case_when(urban == 1 ~ "Urban", urban == 2 ~ "Rural", urban!= 1 | urban!= 2 ~ "Other")) |>
+  mutate(pob = case_when(pob ==101 ~ "Africa", pob ==102 ~ "Asia", pob ==103 ~ "E Europe", pob == 104 ~ "W Europe", pob == 105 ~ "N America", pob == 106 ~ "S America", pob == 107 ~ "C America", pob == 108 ~ "Mexico", pob == 109 ~ "Isle", pob >= 110 & pob <= 111 ~ "Misc.", pob == 000 ~ "Missing", pob >= 901 ~ "US")) |>
+  mutate(sex = case_when(sex == 1 ~ "Male", sex == 2 ~ "Female")) |>
+  mutate(smoke.status = case_when(smoke.status == 1 ~ "Never Smoked", smoke.status == 2 ~ "Everyday", smoke.status == 3 ~ "Some Days", smoke.status == 4 ~ "Smoked Before", smoke.status < 1 ~ "Missing"))
+
+```
+
+```{r}
+# create new column for cause of death category
+
+# Cause of Death
+# Infections: (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+# Viruses: (11, 12, 13, 14, 15, 16, 17, 66, 67)
+# Cancer: (18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41)
+# Resporatory Illnesses: (68, 69, 70, 71, 72, 73, 74, 75, 76)
+# Failure of digestive/endocrine systems: (77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87)
+# Cardiovascular Disease: (49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 62, 63, 64, 65)
+# Accident: (96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113)
+# Other: (42, 43, 44, 45, 46, 47, 48, 61, 88, 89 90, 91, 92, 93, 94, 95)
+
+cod_data <- cod_data |>
+  mutate(cause_of_death = case_when((cause %in% c("001", "002", "003", "004", "005","006", "007","008","009", "010") ~ "BacterialInfection"),
+         (cause %in% c("011", "012", "013", "014", "015","016", "017","066","067") ~ "Virus"),
+         (cause %in% c("018", "019", "020", "021", "022","023", "024","025","026", "027", "028",
+                       "029", "030", "031", "032", "033", "034", "035", "036", "037", "038", "039", "040", "041") ~ "Cancer"),
+         (cause %in% c("068", "069", "070", "071", "072","073", "074","075","076") ~ "RespiratoryIllness"),
+         (cause %in% c("077", "078", "079", "080", "081","082", "083","084","085", "086", "087") ~ "SystemFailure"),
+         (cause %in% c("049", "050", "051", "052", "053","054", "055","056","057", "058", "059",
+                       "060", "062", "063", "064", "065") ~ "CardiovascularDisease"),
+         (cause %in% c("096", "097", "098", "099", "100","101", "102","103","104", "105",
+                       "106", "107", "108", "109", "110", "111", "112", "113") ~ "Accident"),
+         (cause %in% c("042", "043", "044", "045", "046","047", "048","061","088", "089", "090",
+                       "091", "092", "093", "094", "095") ~ "Other")))
+```
+
+```{r}
+# remove mistakes in column for the age they started smoking
+cod_data <- cod_data |> filter(age.smoke > 10)
+```

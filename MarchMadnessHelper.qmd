@@ -1,0 +1,74 @@
+---
+title: "March Madness Helper"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+MNCAATourneySeeds <- read_csv("MNCAATourneySeeds.csv")
+MNCAATourneyCompactResults <- read_csv("MNCAATourneyCompactResults.csv")
+MNCAATourneyDetailedResults <- read_csv("MNCAATourneyDetailedResults.csv")
+
+```
+
+Data required to edit this file:
+
+MNCAATourneySeeds, MNCAATourneyDetailedResults, MNCAATourneyCompactResults, available to download from <https://www.kaggle.com/competitions/march-machine-learning-mania-2025/data>
+
+# **March Madness Helper**
+
+Let's take a look at some interesting facts about March Madness! Whether you're creating your bracket for your family competition or a coach looking to take your team deep into the tournament, statistics can help you make smart decisions and give you an advantage over others. To preface, this data was pulled from a public database that includes data from 2003-2024; so if you're wanting to know about older teams, you'll need to look a little harder.
+
+First let's take a look at some of the most consistenly highly ranked teams! Some teams are historically great, and are consistently ranked with a very high seed. These teams are definitely something to keep in mind as you're making choices about which teams will go deep in the tournament. Let's take a look at the **Average Entering Seed** of each team.
+
+```{r}
+#Average Entering Seed in the Tournament
+library(dplyr) 
+MNCAATourneySeeds$EnteringSeed <- as.numeric(substr(MNCAATourneySeeds$Seed, 2, nchar(MNCAATourneySeeds$Seed))) AverageEnteringSeed <- aggregate(EnteringSeed ~ TeamID, data = MNCAATourneySeeds, FUN = mean) 
+#Use Only Integers 
+AverageEnteringSeed$EnteringSeed <- as.integer(AverageEnteringSeed$EnteringSeed)   
+#Team ID to Team name 
+TeamNames <- MTeams[ ,1:2] AverageEnteringSeed <- TeamNames %>%   left_join(AverageEnteringSeed, by = "TeamID") %>%   select(TeamName, EnteringSeed)   #Select Top 10 Top10 <- head(AverageEnteringSeed[order(AverageEnteringSeed$EnteringSeed), ], 10)  #Output Text cat("🏆 Top 10 Teams in Average Entering Seed 🏆\n") for (i in 1:nrow(Top10)) {   cat(i, ". ", Top10$TeamName[i], ": ", sprintf("%d", Top10$EnteringSeed[i]), "\n", sep = "") }
+```
+
+Wow! It looks like Duke, Kansas and North Carolina have all achieved an average ranking of 2nd in the tournament, that's very impressive! Ranking teams according to their entering seed is a good metric, but lets look at another helpful metric. Let's examine how deep each team makes it into the tournament on average; or in other words, for each time that a team enters the tournament, how many **games they win on average**.
+
+`{r} #Average # of games won per tournament entered  NumberGamesWon <- as.data.frame(table(MNCAATourneyCompactResults$WTeamID)) names(NumberGamesWon) <- c("WTeamID", "GamesWon")  NumberTourneyEntrances <- as.data.frame(table(MNCAATourneySeeds$TeamID)) names(NumberTourneyEntrances) <- c("TeamID", "NumberTourneyEntrances")  Combined_data <- full_join(NumberGamesWon, NumberTourneyEntrances, by = c("WTeamID" = "TeamID")) Combined_data[is.na(Combined_data)] <- 0  Combined_data$AverageGames <- Combined_data$      GamesWon / Combined_data$NumberTourneyEntrances  #Change TeamID to Team Name AverageGamesWon <- Combined_data[ ,c(1,4)] AverageGamesWon <- AverageGamesWon %>%   rename(TeamID = WTeamID) TeamNames <- MTeams[ ,1:2]  #Make Sure they are both characters TeamNames$TeamID <- as.character(TeamNames$TeamID) AverageGamesWon$TeamID <- as.character(AverageGamesWon$TeamID)  AverageGamesWon <- TeamNames %>%   left_join(AverageGamesWon, by = "TeamID") %>%   select(TeamName, AverageGames)  #Select Top 10 Top10 <- head(AverageGamesWon[order(-AverageGamesWon$AverageGames), ], 10)  #Output Text cat("🏆 Top 10 Teams - Average Games Won per Tournament Entry 🏆\n") for (i in 1:nrow(Top10)) {   cat(i, ". ", Top10$TeamName[i], ": ", sprintf("%.2f", Top10$AverageGames[i]), "\n", sep = "") }`
+
+It looks like Duke, Kansas, North Carolina, Kentucky, Conneticut and Florida appear in both the top ten for average ranking and for average games won; It looks like these 6 teams have been historically great, and have lived up to the hype of their rankings; they should be on your radar to go deep into the tournament for sure.
+
+Now that we have identified a few historically great teams, let's take a look at another exciting part of march madness; blow-outs. Each time that you blow out a team in march madness, your **average point difference** will go up (This is calculated by Winning Score - Losing Score). In other words, average point says, "When you do win, how much do you win by?" Let's see which teams are the best at blowing out other teams:
+
+`{r} #Point Differences in each game  MNCAATourneyCompactResults$PointDif <- MNCAATourneyCompactResults$WScore- MNCAATourneyCompactResults$LScore Combined <- MNCAATourneyCompactResults[, c('WTeamID', 'PointDif')] TeamAverages <- Combined %>%   group_by(WTeamID) %>%   summarise(AveragePointDif = mean(PointDif, na.rm = TRUE))  TeamID <- data.frame(TeamID = unique(MNCAATourneySeeds$TeamID))  AveragePointDif <- TeamAverages %>%   rename(TeamID = WTeamID)  # Merge, keeping all TeamID values TeamPoints <- TeamID %>%   left_join(AveragePointDif, by = "TeamID")  # Replace NA in PointDif with 0 TeamPoints[is.na(TeamPoints)] <- 0  # Exchange TeamID for Name TeamNames <- MTeams[ ,1:2]  combined_final <- left_join(TeamNames, TeamPoints, by = "TeamID")  #Select Top 10 Top10 <- combined_final %>%   arrange(desc(AveragePointDif)) %>%   slice_head(n = 10)  #Output Text cat("🏆 Top 10 Teams in Average Point Difference 🏆\n") for (i in 1:nrow(Top10)) {   cat(i, ". ", Top10$TeamName[i], ": ", sprintf("%.2f", Top10$AveragePointDif[i]), "\n", sep = "") }`
+
+It looks like Monmouth NJ, Pepperdine, and UMBC are the best at blowing out other teams! At first you might be surprised by this because you've hardly ever heard of these teams, until that is you learn that each of these teams have only won one game; so they only won once, but when they did they won by 20 points! An impressive feat, but not quite as impressive when you realize that they have only won one game.
+
+Now we've learned about a few historically great teams; hopefully that allows you to make an informed decisions about which teams will go far in your bracket! Now we'll look at some tips and tricks that will help you to call which team is going to win the game even while you're still watching it. It might not win you the bracket challenge, but you'll be able to earn some mad respect from your friends with these general trends.
+
+Let's look first at **3 point FG percentage**; the question that we want to find an answer for is "Do the teams that win have a higher 3 point FG percentage on average than the teams they beat?" Sadly due to data constraints I wasn't able to use the team's 3 point FG percentage from the regular season, rather their 3 point FG percentage during the game, meaning that this conclusion has nothing to do with each team's previous regular season statistics. In this case we're assuming that the madness really is so crazy that your regular season performance means nothing; the only thing that matters is your next game. Let's run a quick statistical model called a two sample t-test to see if teams that win tend to have a higher 3 point FG percentage.
+
+`{r} #3 Point Percentage winning teams vs losing teams  MNCAATourneyDetailedResults$W3Per <- MNCAATourneyDetailedResults$WFGM3 /MNCAATourneyDetailedResults$WFGA3 MNCAATourneyDetailedResults$L3Per <- MNCAATourneyDetailedResults$LFGM3 /MNCAATourneyDetailedResults$LFGA3  #T-Test  t.test(MNCAATourneyDetailedResults$W3Per,MNCAATourneyDetailedResults$L3Per, alternative="greater")  cat("p-value <.05, therefore we reject the H0\n") cat("\033[1mConclusion\033[0m\n") cat("There is significant evidence that winning teams have a higher 3 point percentage than losing teams on average. (Note - this data is pulled from 2003-2024 Seasons) \n")}`
+
+Here are the results; it looks like there is statistically significant evidence that winning teams have a higher 3 point percentage on average than the losing team! That probably wasn't a very shocking fact to you, but it's pretty cool to know that it can be mathematically proven to be so. Now that we've done so, the next time you're watching a march madness game take a look at the stats during halftime. There's a good chance that the team who has a higher 3 point FG percentage will win if they continue to maintain that elevated 3 point FG percentage!
+
+Let's take a look at something a little more interesting now: **fouls**! Let's see if losing teams tend to commit more fouls than the winning teams do; oftentimes these fouls lead to free-throw shots that allow the other team to start growing their lead. Here's the statistical model.
+
+`{r} #Personal Fouls winning teams versus losing teams  #T-Test t.test(MNCAATourneyDetailedResults$LPF,MNCAATourneyDetailedResults$WPF, alternative="greater")  cat("p-value <.05, therefore we reject the H0\n") cat("\033[1mConclusion\033[0m\n") cat("There is significant evidence that losing teams commit more personal fouls than winning teams on average. (Note - this data is pulled from 2003-2024 Seasons) \n")}`
+
+Awesome! We conclude that there is significant evidence that losing teams commit more personal fouls than winning teams on average. It looks like all those fouls really do add up over time; next time you are watching a march madness game, be wary if one team begins to foul excessively; it might be leading them to their downfall.
+
+Speaking of **free throw percentages**, let's take a look at how those can affect the outcome of the game. We'll see which approach to free throws is better - **Tyler Haws**, who set the BYU school record with 50 consecutive free throws made (byucougars.com/sports), or **ShaquilleO'Neal**, who had a career free throw percentage of 52.7% (espn). Here's what our model says:
+
+`{r} MNCAATourneyDetailedResults$WFTp <- MNCAATourneyDetailedResults$WFTM / MNCAATourneyDetailedResults$WFTA MNCAATourneyDetailedResults$LFTp <- MNCAATourneyDetailedResults$LFTM / MNCAATourneyDetailedResults$LFTA  #T-Test t.test(MNCAATourneyDetailedResults$WFTp, MNCAATourneyDetailedResults$LFTp, alternative="greater")  cat("p-value <.05, therefore we reject the H0\n") cat("\033[1mConclusion\033[0m\n") cat("There is significant evidence that winning teams have a higher free throw percentage than losing teams on average. (Note - this data is pulled from 2003-2024 Seasons) \n")}`
+
+As you might expect, there is significant evidence that winning teams have a higher free throw percentage than losing teams on average. The moral of the story here is to practice your free throws; they really do add up!
+
+I hope this guide has been helpful, march madness is an exciting opportunity for fans of all ages and experience levels to get involved in. I wish you the best of luck in this year's bracket!
+
+```{r}
+install.packages("quarto")
+    library(quarto)
+    quarto_render("your_document.qmd", output_format = "pdf")
+```
