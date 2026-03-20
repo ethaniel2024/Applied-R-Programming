@@ -32,10 +32,6 @@ glimpse(penguins)
 
 [***Make a plot showing differences between penguin species and their bills (length and depth).***]{style="color:royalblue;"}
 
-*Hint*: Look at the "Coding Out Loud" lecture for the graphic that answers this question.
-
-*Note*: Replace the `"___"` and uncomment (remove the `#`) to see the effect
-
 ```{r}
 ggplot(penguins,
        aes(x = bill_depth_mm,
@@ -77,8 +73,6 @@ glimpse(gentoo)
 
 *Hint*: Since penguin flipper length is univariate data, to answer this question you will want to try a histogram, density plot, boxplot and your answer will be the one of them that you think best communicates the shape, center, variation, and anything unusual about the distribution.
 
-*Note*: Change `eval` to `true` and replace the `"___"`
-
 ```{r}
 #| eval: true
 ggplot(gentoo, aes(x = flipper_length_mm)) +
@@ -98,8 +92,6 @@ The data has an approximately normal, bell-shaped, distribution. The exact mean 
 
 [***2(c). Make a bar plot about the sex of penguins in the dataset:***]{style="color:royalblue;"}
 
-*Note*: Change `eval` to `true` and replace the `"___"`
-
 ```{r}
 #| eval: true
 ggplot(gentoo, aes(x = sex)) +
@@ -118,10 +110,6 @@ Prompt: What should someone know about the distribution of sex for the Gentoo pe
 It is approximately equal between male and female, which makes sense as there are only three more male penguins than female included in the sample.
 
 [***2(e). Make a graphic about difference in flipper length distribution by sex:***]{style="color:royalblue;"}
-
-*Hint*: Since there are two variables, to answer this question you will want an answer that you think best communicates any difference in sex in the shape, center, variation, and anything unusual about the distribution.
-
-*Note*: Change `eval` to `true` and replace the `"___"`
 
 ```{r}
 #| eval: true
@@ -155,15 +143,3 @@ t.test(flipper_length_mm ~ sex, data = gentoo,
 Prompt: What are the conclusions from this inference (confidence interval and hypothesis test)?
 
 There is a statistically significant difference between the two that could be anywhere from 6.5 to 11 mm, but is most likely around 9 mm. I don't know a lot about gentoo penguins, but it could be a practically significant difference if this could allow researches to easily identify males or females from a large distance. But, I can confidently conclude that male flipper lengths are longer than females in Gentoo penguins.
-
-## Stretch Exercise:
-
-**Model:**
-
-Is the Gentoo penguin flipper length distribution approximately normal?
-
-(Insert R code cell and write appropriate code)
-
-*Reflect:*
-
-Prompt: Why is normality important in the model for this analysis?
