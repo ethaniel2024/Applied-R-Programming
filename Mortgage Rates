@@ -1,5 +1,5 @@
 ---
-title: "HW 3: Mortgage Rates"
+title: "Mortgage Rates"
 author: Ethan Nelson
 format: 
   html: 
@@ -143,8 +143,6 @@ The biggest issue here is that we have two different datasets. We need one set w
 
 [***2(c).***]{style="color:royalblue;"}
 
-What affects my commute time? I performed a randomized experiment during May and April. Each MWF morning I randomly selected a one of our family cars and timed the commute from Mapleton to BYU.
-
 Data:
 
 ```{r}
@@ -214,8 +212,6 @@ utah
 
 Fill in the blanks for filtering `utah` where the `enrollment` is larger than 30,000.
 
-**Note:** You will need to set `eval: true` when you have an answer you want to try out.
-
 ```{r}
 #| eval: true
 
@@ -227,8 +223,6 @@ utah |>
 
 Fill in the blanks for filtering `utah` where the `type` is `Private`.
 
-**Note:** You will need to set `eval: true` when you have an answer you want to try out.
-
 ```{r}
 #| eval: true
 
@@ -239,8 +233,6 @@ utah |>
 [***#3(c). Who are the schools located in Salt Lake City (`SLC`)? Report only the name of the schools.***]{style="color:royalblue;"}
 
 Fill in the blanks for filtering `utah` appropriately and then pipe the result into `select` to produce a list of just the school names.
-
-**Note:** You will need to set `eval: true` when you have an answer you want to try out.
 
 ```{r}
 #| eval: true
