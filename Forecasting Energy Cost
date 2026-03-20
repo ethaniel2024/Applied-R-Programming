@@ -1,0 +1,154 @@
+---
+title: "Mini-Project 2"
+author: Ethan Nelson
+format: 
+  html: 
+    embed-resources: true
+editor: visual
+---
+
+## Project A: Forecasting US Energy Consumption
+
+**Data:**
+
+You are asked to predict the monthly US residential energy consumption for the next 2 years for the 'Short-Term Energy Outlook' using data from the US Department of Energy.
+
+**Import:**
+
+The US Department of Energy collects an impressive amount of data to support the energy industries. For this assignment use the monthly total energy consumed by the US residential sector. The webpage
+
+<https://www.eia.gov/totalenergy/data/browser/index.php?tbl=T02.02>
+
+contains monthly web tables, but an easier approach to getting the data into R uses the result of the 'Download' button to read the source data from the source CSV file.
+
+```{r}
+#| include: false
+#| warnings: false
+library(tidyverse)
+library(scales)
+library(table1)
+```
+
+```{r}
+#| warning: false
+energy <- read_csv("https://www.eia.gov/totalenergy/data/browser/csv.php?tbl=T02.02",
+# names in first row, but the names aren't meaningful
+                   col_names = c("MSN","Time","Res_Energy","label1","label2","label3"),
+                   skip = 1) |>
+  mutate(Res_Energy = parse_number(Res_Energy, na = "Not Available"),
+         Time = ym(Time)) 
+```
+
+[***Problem 1. Why is `energy` tidy?***]{style="color:royalblue;"}
+
+*Note:* Your answer will apply the 3 tidy data rules.
+
+Yes, the dataset is tidy. There are three tenets of tidy dataset design including that each variable must have it's own column, each observation must have it's own row, and that each value must have it's own cell. There are not multiple values assigned to the same cell, each observation has it's own row and each variable has it's own column. While there are some missing values that it will be important to account for later and be aware of in the time section that represent yearly totals, this is a tidy dataset that we can get to work on.
+
+```{r}
+#| eval: true
+  filter(energy, Time > "1991-12-31" & MSN=="TERCBUS") |>
+  select(Time, Res_Energy) |>
+  na.omit()
+```
+
+**Wrangling:**
+
+This version of the `energy` dataset requires some wrangling before performing the analysis. Specifically the following tasks are required:
+
+-   filter to the data in rows where `MSN` is `TERCBUS` (Total Energy Consumed by the Residential Sector in trillion Btu),
+
+-   filter to current data (after 1991),
+
+-   remove the annual total rows (`Time` is missing / `NA`).
+
+-   only include the columns `Time` and `Res_Energy` columns, and
+
+[***Problem 2. Edit the following code chunk to perform the required tasks.***]{style="color:royalblue;"}
+
+```{r}
+#| eval: true
+energy <- energy |>
+# filter to TERCBUS Total Energy Consumed by the Residential Sector
+  filter(MSN=="TERCBUS") |>
+# filter to "since the 90's"
+  filter(Time > "1991-12-31") |>
+# remove annual total rows (Time is NA)
+  na.omit() |>
+# keep just the Time and Res_Energy columns
+  select("Time", "Res_Energy")
+
+# take a look
+tail(energy)
+```
+
+**EDA:**
+
+[***Problem 3. Plot the time series for US residential energy consumption (in trillion Btu).***]{style="color:royalblue;"}
+
+**Note:** You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+ggplot(energy, aes(x = Time, y = Res_Energy)) +
+  geom_line()
+```
+
+**Model:**
+
+Fit an ARIMA$(1, 1, 1) \times (1, 1, 1)_{12}$ model and report the parameter estimates and standard errors.
+
+**Note:** The required code is provided. You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+energy_out <- arima(energy$Res_Energy,
+                    order = c(1, 1, 1),
+		                seasonal = list(order = c(1, 1, 1), period = 12))
+
+# table of estimates and se
+energy_out
+```
+
+Forecast the US residential energy consumption for the next 2 years. Report a table of predictions and 95% prediction intervals.
+
+**Note:** The required code is provided. You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+#  "next two years" 
+energy_forecast <- data.frame(Time = max(energy$Time) + months(1 : 24))
+energy_yhat <- predict(energy_out, n.ahead = 24)
+
+# table of forecasts and uncertainty
+energy_forecast$pred <- energy_yhat$pred
+energy_forecast$L <- energy_yhat$pred - 2 * energy_yhat$se
+energy_forecast$U <- energy_yhat$pred + 2 * energy_yhat$se
+
+energy_forecast
+```
+
+**Share:**
+
+**Note:** The required code is provided. You will need to set `eval: true` when you have created the `energy` dataset in the Wrangling section.
+
+```{r}
+#| eval: true
+#| warnings: false
+#| code-fold: true
+ggplot(energy_forecast, aes(x = Time, y = pred)) +
+  geom_line() + 
+  geom_line(aes(x = Time, y = L), col = "forestgreen", linetype = 2) + 
+  geom_line(aes(x = Time, y = U), col = "forestgreen", linetype = 2) +
+  scale_x_date(date_labels = "%b %Y") +
+  scale_y_continuous(labels =  label_comma()) +
+  labs(
+    title = "Residential Energy",
+    x = NULL, 
+    y = "Forecast Energy (in trillion Btu)"
+    )
+```
+
+[***Problem 4. Prompt: Does it appear there is a monthly pattern? If so, explain the possible business/economic 'cause' for this effect.***]{style="color:royalblue;"}
+
+Yes, it does appear that energy usage soars in the winter season and plummets in the summer months. This is plausible as more people are spending time inside during the winter than the summer and engaging in indoor activities that use more energy such as watching television or playing video games, whereas in the summer months, individuals might be more likely to participate in outdoor activities such as hiking or fishing that do not require any energy usage. I don't know enough about the difference between costs for heating and air conditioning, although it would be worth exploring if there is a significant difference between the two and if that is also contributing to the broad discrepancies between summer and winter energy usage.
